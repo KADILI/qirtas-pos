@@ -359,6 +359,7 @@
   const db = getFirestore(fbApp);
   const storeRef = doc(db, "qirtas_store", "main");
   window.__fb = { db, storeRef, getDoc, setDoc, onSnapshot };
+  window.dispatchEvent(new Event('fb-ready'));
 </script>
 
 <script>
@@ -818,7 +819,7 @@ document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click', e=>{ if(e.target===ov && ov.id!=='receiptOverlay') ov.classList.remove('show'); });
 });
 
-loadData();
+if(window.__fb){ loadData(); } else { window.addEventListener('fb-ready', loadData); }
 </script>
 </body>
 </html>
