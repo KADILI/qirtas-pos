@@ -557,6 +557,10 @@ barcodeInput.addEventListener('keydown', e=>{
   showToast(`✅ ${p.name}`);
 });
 function refocusScanner(){
+  const gate = document.getElementById('siteGate');
+  if(gate && gate.style.display !== 'none') return;
+  const active = document.activeElement;
+  if(active && (active.tagName==='INPUT' || active.tagName==='TEXTAREA' || active.isContentEditable) && active.id !== 'barcodeInput') return;
   if(document.getElementById('posTab').style.display !== 'none') barcodeInput.focus();
 }
 document.addEventListener('click', ()=>{ setTimeout(refocusScanner, 50); });
