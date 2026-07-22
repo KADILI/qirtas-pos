@@ -196,9 +196,10 @@
   <div style="max-width:340px;width:90vw;background:var(--paper);padding:28px;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,0.4);text-align:center;">
     <div style="font-size:40px;margin-bottom:6px;">📚</div>
     <h2 style="margin:0 0 16px;">مكتبة منار</h2>
-    <div class="field"><label>كلمة السر</label><input type="password" id="gatePass" autofocus></div>
+    <div class="field" style="text-align:right;"><label>اسم المستخدم</label><input type="text" id="gateUser" autofocus></div>
+    <div class="field" style="text-align:right;"><label>كلمة السر</label><input type="password" id="gatePass"></div>
     <button class="btn btn-primary" style="width:100%;" onclick="trySiteLogin()">دخول</button>
-    <p id="gateError" style="color:var(--wine-deep);font-size:13px;margin-top:10px;display:none;">كلمة السر غير صحيحة</p>
+    <p id="gateError" style="color:var(--wine-deep);font-size:13px;margin-top:10px;display:none;">اسم المستخدم أو كلمة السر غير صحيحة</p>
   </div>
 </div>
 <div class="app">
@@ -212,10 +213,12 @@
     </div>
     <div class="clock nums" id="clockDisplay"></div>
     <div class="sync-status" id="syncStatus">🔗 متصل ومتزامن</div>
+    <div id="currentUserBadge" style="font-size:13px;color:var(--gold-soft);"></div>
     <div class="actions">
       <button class="icon-btn" onclick="manualSync()">🔄 تحديث</button>
       <button class="icon-btn active-mode" id="posTabBtn" onclick="showTab('pos')">🧾 الكاشير</button>
-      <button class="icon-btn" id="adminTabBtn" onclick="showTab('admin')">⚙️ الإدارة والتقارير</button>
+      <button class="icon-btn" id="adminTabBtn" onclick="showTab('admin')" style="display:none;">⚙️ الإدارة والتقارير</button>
+      <button class="icon-btn" onclick="siteLogout()">🚪 خروج</button>
     </div>
   </div>
 
@@ -242,27 +245,25 @@
         <div class="sum-row total"><span>المجموع</span><span class="nums" id="orderTotal">0 د.م</span></div>
 
         <button class="btn btn-primary" id="finishSaleBtn" onclick="finishSale()" disabled>إنهاء البيع</button>
+        <button class="btn btn-outline" id="quoteBtn" onclick="generateQuote()" disabled style="width:100%;margin-top:8px;">📋 تسعيرة فقط (بدون بيع)</button>
       </div>
     </div>
   </div>
 
   <div class="main-split" id="adminTab" style="display:none;">
     <div class="admin-scroll" style="width:100%;">
-      <div id="adminLoginBox" class="login-box">
-        <div style="max-width:340px;margin:60px auto;background:#fff;padding:28px;border-radius:14px;box-shadow:var(--shadow);">
-          <h2 style="margin-top:0;">دخول لوحة الإدارة</h2>
-          <div class="field"><label>كلمة السر</label><input type="password" id="adminPass"></div>
-          <button class="btn btn-primary" onclick="tryAdminLogin()">دخول</button>
-        </div>
-      </div>
-
-      <div id="adminPanel" style="display:none;">
+      <div id="adminPanel" style="display:block;">
         <div class="section-head">
           <h2 style="margin:0;">لوحة الإدارة</h2>
-          <button class="btn btn-outline" onclick="logoutAdmin()">تسجيل الخروج</button>
         </div>
         <div class="stat-grid" id="statGrid"></div>
         <div id="lowStockAlertWrap"></div>
+
+        <div class="section-head">
+          <h3 style="margin:0;">إدارة المستخدمين (اليوزر والكود ديال كل جهاز)</h3>
+          <button class="btn btn-gold" onclick="openUserForm()">+ إضافة مستخدم</button>
+        </div>
+        <div class="table-wrap"><table id="usersTable"></table></div>
 
         <div class="section-head">
           <h3 style="margin:0;">إدارة المنتوجات</h3>
@@ -271,7 +272,15 @@
         <div class="table-wrap"><table id="productsTable"></table></div>
 
         <div class="section-head">
+          <h3 style="margin:0;">المبيعات حسب المستخدم</h3>
+        </div>
+        <div class="table-wrap"><table id="salesByUserTable"></table></div>
+
+        <div class="section-head">
           <h3 style="margin:0;">سجل المبيعات</h3>
+          <select id="salesUserFilter" onchange="renderAdmin()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--paper-deep);font-family:'Tajawal';">
+            <option value="">كل المستخدمين</option>
+          </select>
         </div>
         <div class="table-wrap"><table id="salesTable"></table></div>
 
@@ -283,6 +292,28 @@
     </div>
   </div>
 
+</div>
+
+<!-- User Form Modal (admin) -->
+<div class="overlay" id="userFormOverlay">
+  <div class="modal-box">
+    <div class="drawer-head">
+      <h2 id="userFormTitle" style="margin:0;">إضافة مستخدم</h2>
+      <button class="close-x" onclick="toggleUserForm(false)">✕</button>
+    </div>
+    <input type="hidden" id="ufId">
+    <div class="field"><label>الاسم الكامل</label><input type="text" id="ufName" placeholder="مثال: أمين"></div>
+    <div class="field"><label>اسم المستخدم (Username)</label><input type="text" id="ufUsername" placeholder="مثال: amine"></div>
+    <div class="field"><label>كلمة السر</label><input type="text" id="ufPassword" placeholder="كود الدخول"></div>
+    <div class="field">
+      <label>الصلاحية</label>
+      <select id="ufRole">
+        <option value="cashier">كاشير (يقدر يبيع فقط)</option>
+        <option value="admin">مدير (يقدر يدير كلشي)</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="saveUser()">حفظ المستخدم</button>
+  </div>
 </div>
 
 <!-- Product Form Modal -->
@@ -326,13 +357,13 @@
 <div class="overlay" id="receiptOverlay">
   <div class="modal-box">
     <div class="drawer-head">
-      <h2 style="margin:0;">تم البيع ✅</h2>
+      <h2 style="margin:0;" id="receiptModalTitle">تم البيع ✅</h2>
       <button class="close-x" onclick="closeReceipt()">✕</button>
     </div>
     <div class="receipt" id="printArea"></div>
     <div style="display:flex; gap:10px; margin-top:14px;">
       <button class="btn btn-outline" style="flex:1;" onclick="window.print()">🖨️ طباعة</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="closeReceipt()">بيع جديد</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="closeReceipt()" id="receiptCloseBtn">بيع جديد</button>
     </div>
   </div>
 </div>
@@ -369,11 +400,17 @@ const CATEGORIES = ["الكل","كتب","أقلام","أدوات مكتبية","
 let products = [];
 let sales = [];
 let movements = [];
+let users = [];
+let currentUser = null;
 let order = {}; // {productId: qty}
 let activeCategory = "الكل";
 let searchTerm = "";
 let isAdmin = false;
 let lastReceiptData = null;
+
+const defaultUsers = [
+  {id:"u1", name:"عبد لطيف (المدير)", username:"admin", password:"Younes@2005", role:"admin"}
+];
 
 const defaultProducts = [
   {id:"p1", name:"رواية الأسود يليق بك", category:"كتب", icon:"📗", price:65, stock:14, threshold:5, barcode:"611234500011"},
@@ -399,10 +436,20 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
+// seed with default admin so login works instantly even before Firestore responds
+users = defaultUsers.slice();
+
 function trySiteLogin(){
+  const username = document.getElementById('gateUser').value.trim();
   const pass = document.getElementById('gatePass').value;
-  if(pass === 'Younes@2005'){
+  const found = users.find(u=>u.username===username && u.password===pass);
+  if(found){
+    currentUser = found;
+    isAdmin = (found.role === 'admin');
     document.getElementById('siteGate').style.display = 'none';
+    document.getElementById('currentUserBadge').textContent = `👤 ${found.name} (${found.role==='admin'?'مدير':'كاشير'})`;
+    document.getElementById('adminTabBtn').style.display = isAdmin ? 'flex' : 'none';
+    document.getElementById('gateError').style.display = 'none';
   }else{
     document.getElementById('gateError').style.display = 'block';
   }
@@ -410,6 +457,17 @@ function trySiteLogin(){
 document.getElementById('gatePass').addEventListener('keydown', e=>{
   if(e.key === 'Enter') trySiteLogin();
 });
+document.getElementById('gateUser').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') document.getElementById('gatePass').focus();
+});
+function siteLogout(){
+  currentUser = null;
+  isAdmin = false;
+  document.getElementById('gateUser').value='';
+  document.getElementById('gatePass').value='';
+  document.getElementById('siteGate').style.display = 'flex';
+  showTab('pos');
+}
 
 function updateClock(){
   document.getElementById('clockDisplay').textContent = new Date().toLocaleString('ar-MA', {dateStyle:'medium', timeStyle:'short'});
@@ -425,16 +483,22 @@ async function loadData(){
       products = data.products || defaultProducts;
       sales = data.sales || [];
       movements = data.movements || [];
+      users = (data.users && data.users.length) ? data.users : defaultUsers;
+      if(!data.users || !data.users.length){
+        await setDoc(storeRef, {users}, {merge:true});
+      }
     }else{
       products = defaultProducts;
       sales = [];
       movements = [];
-      await setDoc(storeRef, {products, sales, movements});
+      users = defaultUsers;
+      await setDoc(storeRef, {products, sales, movements, users});
     }
   }catch(e){
     console.error(e);
     products = defaultProducts;
     sales = [];
+    users = defaultUsers;
     const statusEl = document.getElementById('syncStatus');
     statusEl.textContent = '⚠️ تحقق من إعدادات Firebase';
     statusEl.classList.add('offline');
@@ -457,6 +521,7 @@ function listenRealtime(){
     if(data.products) products = data.products;
     if(data.sales) sales = data.sales;
     if(data.movements) movements = data.movements;
+    if(data.users && data.users.length) users = data.users;
     renderProducts();
     renderOrder();
     if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
@@ -474,13 +539,18 @@ function manualSync(){ showToast('المزامنة تلقائية ومباشرة
 
 async function persistProducts(){
   const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {products, sales, movements}, {merge:true}); }
+  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
   catch(e){ showToast('تعذر حفظ البيانات — تحقق من إعدادات Firebase'); }
 }
 async function persistSales(){
   const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {products, sales, movements}, {merge:true}); }
+  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
   catch(e){ showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); }
+}
+async function persistUsers(){
+  const { setDoc, storeRef } = window.__fb;
+  try{ await setDoc(storeRef, {users}, {merge:true}); }
+  catch(e){ showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); }
 }
 function addMovement(type, description){
   movements.unshift({
@@ -492,11 +562,15 @@ function addMovement(type, description){
 
 /* ===== Tabs ===== */
 function showTab(tab){
+  if(tab==='admin' && !isAdmin){
+    showToast('هذا القسم خاص بالمدير فقط');
+    return;
+  }
   document.getElementById('posTab').style.display = tab==='pos' ? 'flex' : 'none';
   document.getElementById('adminTab').style.display = tab==='admin' ? 'flex' : 'none';
   document.getElementById('posTabBtn').classList.toggle('active-mode', tab==='pos');
   document.getElementById('adminTabBtn').classList.toggle('active-mode', tab==='admin');
-  if(tab==='admin' && isAdmin) renderAdmin();
+  if(tab==='admin') renderAdmin();
 }
 
 /* ===== Products / categories ===== */
@@ -626,14 +700,51 @@ function renderOrder(){
   }
 
   document.getElementById('finishSaleBtn').disabled = ids.length===0;
+  document.getElementById('quoteBtn').disabled = ids.length===0;
 }
 
 /* ===== Sale finalization ===== */
+
+function generateQuote(){
+  const ids = Object.keys(order);
+  if(ids.length===0) return;
+  const total = orderTotal();
+  const items = ids.map(id=>{
+    const p = products.find(x=>x.id===id);
+    return {name:p.name, icon:p.icon, qty:order[id], price:p.price, lineTotal:p.price*order[id]};
+  });
+  const quote = {
+    items, total,
+    date: new Date().toLocaleString('ar-MA')
+  };
+  showQuote(quote);
+  // quotes are informational only: no stock change, no sale recorded, order stays as-is
+  // so the cashier can still finish the real sale afterwards if the customer agrees
+}
+
+function showQuote(quote){
+  document.getElementById('receiptModalTitle').textContent = '📋 تسعيرة (بدون بيع)';
+  document.getElementById('receiptCloseBtn').textContent = 'إغلاق';
+  document.getElementById('printArea').innerHTML = `
+    <h2>📚 مكتبة منار</h2>
+    <div class="sub">تسعيرة تقديرية — ${quote.date}</div>
+    <hr>
+    ${quote.items.map(i=>`
+      <div class="receipt-line"><span>${i.icon} ${i.name} × ${i.qty}</span><span class="nums">${i.lineTotal} د.م</span></div>
+    `).join('')}
+    <hr>
+    <div class="receipt-total"><span>المجموع التقديري</span><span class="nums">${quote.total} د.م</span></div>
+    <hr>
+    <div class="sub" style="margin-top:8px;">⚠️ هذه تسعيرة فقط وليست فاتورة بيع، والأسعار قابلة للتغيير</div>
+  `;
+  document.getElementById('receiptOverlay').classList.add('show');
+}
 
 async function finishSale(){
   const ids = Object.keys(order);
   if(ids.length===0) return;
   const total = orderTotal();
+
   const items = ids.map(id=>{
     const p = products.find(x=>x.id===id);
     p.stock -= order[id];
@@ -642,10 +753,13 @@ async function finishSale(){
   const sale = {
     id: 's'+Date.now(),
     items, total,
+    cashierUsername: currentUser ? currentUser.username : 'غير معروف',
+    cashierName: currentUser ? currentUser.name : 'غير معروف',
     date: new Date().toLocaleString('ar-MA')
   };
   sales.unshift(sale);
   addMovement('بيع', `عملية بيع بقيمة ${total} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})`);
+
   await persistProducts();
   await persistSales();
   renderProducts();
@@ -657,6 +771,8 @@ async function finishSale(){
 }
 
 function showReceipt(sale){
+  document.getElementById('receiptModalTitle').textContent = 'تم البيع ✅';
+  document.getElementById('receiptCloseBtn').textContent = 'بيع جديد';
   document.getElementById('printArea').innerHTML = `
     <h2>📚 مكتبة منار</h2>
     <div class="sub">فاتورة بيع — ${sale.date}</div>
@@ -674,29 +790,9 @@ function showReceipt(sale){
 function closeReceipt(){ document.getElementById('receiptOverlay').classList.remove('show'); }
 
 /* ===== Admin ===== */
-function tryAdminLogin(){
-  const pass = document.getElementById('adminPass').value;
-  if(pass==='Younes@2005'){
-    isAdmin = true;
-    document.getElementById('adminLoginBox').style.display='none';
-    document.getElementById('adminPanel').style.display='block';
-    renderAdmin();
-  }else{ showToast('كلمة السر غير صحيحة'); }
-}
-function logoutAdmin(){
-  isAdmin=false;
-  document.getElementById('adminPass').value='';
-  document.getElementById('adminLoginBox').style.display='block';
-  document.getElementById('adminPanel').style.display='none';
-}
 
 function renderAdmin(){
   const lowStock = products.filter(p=>p.stock<=p.threshold);
-  const today = new Date().toLocaleDateString('ar-MA');
-  const todaySales = sales.filter(s=>s.date.startsWith(today) || s.date.includes(today));
-  const todayRevenue = sales.reduce((sum,s)=>{
-    return sum + (isSameDay(s.date) ? s.total : 0);
-  },0);
   const totalRevenue = sales.reduce((s,x)=>s+x.total,0);
 
   document.getElementById('statGrid').innerHTML = `
@@ -712,6 +808,21 @@ function renderAdmin(){
       <h3>⚠️ تنبيه: منتوجات في طريقها للنفاد</h3>
       ${lowStock.map(p=>`<div class="alert-row"><span>${p.icon} ${p.name}</span><span><b>${p.stock}</b> متبقي من ${p.threshold}</span></div>`).join('')}
     </div>`;
+
+  document.getElementById('usersTable').innerHTML = `
+    <thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>كلمة السر</th><th>الصلاحية</th><th></th></tr></thead>
+    <tbody>${users.map(u=>`
+      <tr>
+        <td>${u.name}</td>
+        <td class="nums">${u.username}</td>
+        <td class="nums">${u.password}</td>
+        <td>${u.role==='admin'?'مدير':'كاشير'}</td>
+        <td style="display:flex;gap:8px;">
+          <button class="btn btn-outline" style="padding:6px 10px;" onclick="openUserForm('${u.id}')">تعديل</button>
+          <button class="icon-del" onclick="deleteUser('${u.id}')">🗑️</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>`;
 
   document.getElementById('productsTable').innerHTML = `
     <thead><tr><th>المنتوج</th><th>الباركود</th><th>الفئة</th><th>السعر</th><th>المخزون</th><th></th></tr></thead>
@@ -729,11 +840,42 @@ function renderAdmin(){
       </tr>`).join('')}
     </tbody>`;
 
-  document.getElementById('salesTable').innerHTML = `
-    <thead><tr><th>المنتوجات</th><th>المجموع</th><th>التاريخ</th></tr></thead>
-    <tbody>${sales.length===0 ? `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">لا توجد مبيعات بعد</td></tr>` :
-      sales.map(s=>`
+  // Sales grouped by cashier
+  const byUser = {};
+  sales.forEach(s=>{
+    const key = s.cashierUsername || 'غير معروف';
+    if(!byUser[key]) byUser[key] = {name: s.cashierName || key, count:0, total:0};
+    byUser[key].count++;
+    byUser[key].total += s.total;
+  });
+  document.getElementById('salesByUserTable').innerHTML = `
+    <thead><tr><th>الكاشير</th><th>عدد عمليات البيع</th><th>إجمالي المبيعات</th></tr></thead>
+    <tbody>${Object.keys(byUser).length===0 ? `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">لا توجد مبيعات بعد</td></tr>` :
+      Object.entries(byUser).map(([username,d])=>`
         <tr>
+          <td>${d.name}</td>
+          <td class="nums">${d.count}</td>
+          <td class="nums">${d.total} د.م</td>
+        </tr>`).join('')}
+    </tbody>`;
+
+  // populate cashier filter dropdown (keep current selection)
+  const filterEl = document.getElementById('salesUserFilter');
+  const currentFilter = filterEl.value;
+  const uniqueUsers = [...new Set(sales.map(s=>s.cashierUsername).filter(Boolean))];
+  filterEl.innerHTML = `<option value="">كل المستخدمين</option>` +
+    uniqueUsers.map(u=>{
+      const uname = (sales.find(s=>s.cashierUsername===u)||{}).cashierName || u;
+      return `<option value="${u}" ${u===currentFilter?'selected':''}>${uname}</option>`;
+    }).join('');
+
+  const filteredSales = currentFilter ? sales.filter(s=>s.cashierUsername===currentFilter) : sales;
+  document.getElementById('salesTable').innerHTML = `
+    <thead><tr><th>الكاشير</th><th>المنتوجات</th><th>المجموع</th><th>التاريخ</th></tr></thead>
+    <tbody>${filteredSales.length===0 ? `<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">لا توجد مبيعات بعد</td></tr>` :
+      filteredSales.map(s=>`
+        <tr>
+          <td>${s.cashierName||'—'}</td>
           <td>${s.items.map(i=>`${i.name} ×${i.qty}`).join('، ')}</td>
           <td class="nums">${s.total} د.م</td>
           <td>${s.date}</td>
@@ -759,6 +901,61 @@ function renderAdmin(){
 }
 function isSameDay(dateStr){
   return dateStr.split('،')[0] === new Date().toLocaleDateString('ar-MA');
+}
+
+function openUserForm(id){
+  document.getElementById('userFormOverlay').classList.add('show');
+  if(id){
+    const u = users.find(x=>x.id===id);
+    document.getElementById('userFormTitle').textContent='تعديل المستخدم';
+    document.getElementById('ufId').value=u.id;
+    document.getElementById('ufName').value=u.name;
+    document.getElementById('ufUsername').value=u.username;
+    document.getElementById('ufPassword').value=u.password;
+    document.getElementById('ufRole').value=u.role;
+  }else{
+    document.getElementById('userFormTitle').textContent='إضافة مستخدم';
+    document.getElementById('ufId').value='';
+    document.getElementById('ufName').value='';
+    document.getElementById('ufUsername').value='';
+    document.getElementById('ufPassword').value='';
+    document.getElementById('ufRole').value='cashier';
+  }
+}
+function toggleUserForm(show){ document.getElementById('userFormOverlay').classList.toggle('show', show); }
+
+async function saveUser(){
+  const id = document.getElementById('ufId').value;
+  const name = document.getElementById('ufName').value.trim();
+  const username = document.getElementById('ufUsername').value.trim();
+  const password = document.getElementById('ufPassword').value.trim();
+  const role = document.getElementById('ufRole').value;
+  if(!name || !username || !password){ showToast('عمر جميع الحقول'); return; }
+  if(users.some(u=>u.username===username && u.id!==id)){
+    showToast('اسم المستخدم هذا مستعمل من طرف حساب آخر');
+    return;
+  }
+  if(id){
+    const u = users.find(x=>x.id===id);
+    Object.assign(u, {name, username, password, role});
+    if(currentUser && currentUser.id===id) currentUser = u;
+  }else{
+    users.push({id:'u'+Date.now(), name, username, password, role});
+  }
+  await persistUsers();
+  toggleUserForm(false);
+  renderAdmin();
+  showToast('تم حفظ المستخدم');
+}
+
+async function deleteUser(id){
+  if(users.length<=1){ showToast('لازم يبقى حساب واحد ديال المدير على الأقل'); return; }
+  if(currentUser && currentUser.id===id){ showToast('ما يمكنش تحذف الحساب لي مدخل بيه دابا'); return; }
+  if(!confirm('واش متأكد من حذف هذا المستخدم؟')) return;
+  users = users.filter(u=>u.id!==id);
+  await persistUsers();
+  renderAdmin();
+  showToast('تم حذف المستخدم');
 }
 
 function generateBarcode(){
