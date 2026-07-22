@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>قرطاس — نقطة البيع</title>
+<title>مكتبة منار — نقطة البيع</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;600;700&family=Tajawal:wght@300;400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -198,7 +198,7 @@
     <div class="brand">
       <span class="mark">📚</span>
       <div>
-        <h1>قرطاس — نقطة البيع</h1>
+        <h1>مكتبة منار — نقطة البيع</h1>
       </div>
     </div>
     <div class="clock nums" id="clockDisplay"></div>
@@ -232,17 +232,6 @@
         <div class="sum-row"><span>عدد القطع</span><span class="nums" id="itemCount">0</span></div>
         <div class="sum-row total"><span>المجموع</span><span class="nums" id="orderTotal">0 د.م</span></div>
 
-        <div class="pay-methods">
-          <button class="pay-btn active" id="payCashBtn" onclick="setPayMethod('cash')">💵 نقدا</button>
-          <button class="pay-btn" id="payCardBtn" onclick="setPayMethod('card')">💳 بطاقة</button>
-        </div>
-        <div class="cash-row show" id="cashRow">
-          <input type="number" id="cashReceived" placeholder="المبلغ المستلم" oninput="calcChange()">
-        </div>
-        <div class="change-line" id="changeLine">
-          <span>الباقي للزبون</span><span class="nums" id="changeAmount">0 د.م</span>
-        </div>
-
         <button class="btn btn-primary" id="finishSaleBtn" onclick="finishSale()" disabled>إنهاء البيع</button>
       </div>
     </div>
@@ -255,7 +244,6 @@
           <h2 style="margin-top:0;">دخول لوحة الإدارة</h2>
           <div class="field"><label>كلمة السر</label><input type="password" id="adminPass"></div>
           <button class="btn btn-primary" onclick="tryAdminLogin()">دخول</button>
-          <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">كلمة السر الافتراضية: <b>admin123</b></p>
         </div>
       </div>
 
@@ -277,6 +265,11 @@
           <h3 style="margin:0;">سجل المبيعات</h3>
         </div>
         <div class="table-wrap"><table id="salesTable"></table></div>
+
+        <div class="section-head">
+          <h3 style="margin:0;">سجل الحركة</h3>
+        </div>
+        <div class="table-wrap"><table id="movementsTable"></table></div>
       </div>
     </div>
   </div>
@@ -366,11 +359,11 @@
 const CATEGORIES = ["الكل","كتب","أقلام","أدوات مكتبية","قرطاسية"];
 let products = [];
 let sales = [];
+let movements = [];
 let order = {}; // {productId: qty}
 let activeCategory = "الكل";
 let searchTerm = "";
 let isAdmin = false;
-let payMethod = 'cash';
 let lastReceiptData = null;
 
 const defaultProducts = [
@@ -410,10 +403,12 @@ async function loadData(){
       const data = snap.data();
       products = data.products || defaultProducts;
       sales = data.sales || [];
+      movements = data.movements || [];
     }else{
       products = defaultProducts;
       sales = [];
-      await setDoc(storeRef, {products, sales});
+      movements = [];
+      await setDoc(storeRef, {products, sales, movements});
     }
   }catch(e){
     console.error(e);
@@ -440,6 +435,7 @@ function listenRealtime(){
     const data = snap.data();
     if(data.products) products = data.products;
     if(data.sales) sales = data.sales;
+    if(data.movements) movements = data.movements;
     renderProducts();
     renderOrder();
     if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
@@ -457,13 +453,20 @@ function manualSync(){ showToast('المزامنة تلقائية ومباشرة
 
 async function persistProducts(){
   const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {products, sales}, {merge:true}); }
+  try{ await setDoc(storeRef, {products, sales, movements}, {merge:true}); }
   catch(e){ showToast('تعذر حفظ البيانات — تحقق من إعدادات Firebase'); }
 }
 async function persistSales(){
   const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {products, sales}, {merge:true}); }
+  try{ await setDoc(storeRef, {products, sales, movements}, {merge:true}); }
   catch(e){ showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); }
+}
+function addMovement(type, description){
+  movements.unshift({
+    id: 'm'+Date.now()+Math.floor(Math.random()*1000),
+    type, description,
+    date: new Date().toLocaleString('ar-MA')
+  });
 }
 
 /* ===== Tabs ===== */
@@ -598,35 +601,14 @@ function renderOrder(){
   }
 
   document.getElementById('finishSaleBtn').disabled = ids.length===0;
-  calcChange();
 }
 
-/* ===== Payment ===== */
-function setPayMethod(m){
-  payMethod = m;
-  document.getElementById('payCashBtn').classList.toggle('active', m==='cash');
-  document.getElementById('payCardBtn').classList.toggle('active', m==='card');
-  document.getElementById('cashRow').classList.toggle('show', m==='cash');
-  document.getElementById('changeLine').classList.toggle('show', m==='cash');
-  calcChange();
-}
-function calcChange(){
-  if(payMethod!=='cash'){ document.getElementById('changeLine').classList.remove('show'); return; }
-  const total = orderTotal();
-  const received = parseFloat(document.getElementById('cashReceived').value)||0;
-  const change = received - total;
-  document.getElementById('changeAmount').textContent = (change>0?change:0) + ' د.م';
-  document.getElementById('changeLine').classList.toggle('show', received>0);
-}
+/* ===== Sale finalization ===== */
 
 async function finishSale(){
   const ids = Object.keys(order);
   if(ids.length===0) return;
   const total = orderTotal();
-  if(payMethod==='cash'){
-    const received = parseFloat(document.getElementById('cashReceived').value)||0;
-    if(received < total){ showToast('المبلغ المستلم غير كافٍ'); return; }
-  }
   const items = ids.map(id=>{
     const p = products.find(x=>x.id===id);
     p.stock -= order[id];
@@ -635,11 +617,10 @@ async function finishSale(){
   const sale = {
     id: 's'+Date.now(),
     items, total,
-    method: payMethod,
-    cash: payMethod==='cash' ? parseFloat(document.getElementById('cashReceived').value)||0 : null,
     date: new Date().toLocaleString('ar-MA')
   };
   sales.unshift(sale);
+  addMovement('بيع', `عملية بيع بقيمة ${total} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})`);
   await persistProducts();
   await persistSales();
   renderProducts();
@@ -647,14 +628,12 @@ async function finishSale(){
   lastReceiptData = sale;
   showReceipt(sale);
   order = {};
-  document.getElementById('cashReceived').value='';
   renderOrder();
 }
 
 function showReceipt(sale){
-  const change = sale.method==='cash' ? (sale.cash - sale.total) : null;
   document.getElementById('printArea').innerHTML = `
-    <h2>📚 قرطاس</h2>
+    <h2>📚 مكتبة منار</h2>
     <div class="sub">فاتورة بيع — ${sale.date}</div>
     <hr>
     ${sale.items.map(i=>`
@@ -662,11 +641,6 @@ function showReceipt(sale){
     `).join('')}
     <hr>
     <div class="receipt-total"><span>المجموع</span><span class="nums">${sale.total} د.م</span></div>
-    <div class="receipt-line"><span>طريقة الأداء</span><span>${sale.method==='cash'?'نقدا':'بطاقة'}</span></div>
-    ${sale.method==='cash' ? `
-      <div class="receipt-line"><span>المبلغ المستلم</span><span class="nums">${sale.cash} د.م</span></div>
-      <div class="receipt-line"><span>الباقي</span><span class="nums">${change} د.م</span></div>
-    ` : ''}
     <hr>
     <div class="sub" style="margin-top:8px;">شكرا لزيارتكم 🌿</div>
   `;
@@ -677,7 +651,7 @@ function closeReceipt(){ document.getElementById('receiptOverlay').classList.rem
 /* ===== Admin ===== */
 function tryAdminLogin(){
   const pass = document.getElementById('adminPass').value;
-  if(pass==='admin123'){
+  if(pass==='Younes@2005'){
     isAdmin = true;
     document.getElementById('adminLoginBox').style.display='none';
     document.getElementById('adminPanel').style.display='block';
@@ -731,14 +705,30 @@ function renderAdmin(){
     </tbody>`;
 
   document.getElementById('salesTable').innerHTML = `
-    <thead><tr><th>المنتوجات</th><th>المجموع</th><th>طريقة الأداء</th><th>التاريخ</th></tr></thead>
-    <tbody>${sales.length===0 ? `<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">لا توجد مبيعات بعد</td></tr>` :
+    <thead><tr><th>المنتوجات</th><th>المجموع</th><th>التاريخ</th></tr></thead>
+    <tbody>${sales.length===0 ? `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">لا توجد مبيعات بعد</td></tr>` :
       sales.map(s=>`
         <tr>
           <td>${s.items.map(i=>`${i.name} ×${i.qty}`).join('، ')}</td>
           <td class="nums">${s.total} د.م</td>
-          <td>${s.method==='cash'?'نقدا':'بطاقة'}</td>
           <td>${s.date}</td>
+        </tr>`).join('')}
+    </tbody>`;
+
+  const typeColor = {
+    'إضافة منتوج': 'color:var(--green-ok);font-weight:700;',
+    'تعديل المخزون': 'color:var(--gold);font-weight:700;',
+    'بيع': 'color:var(--ink-soft);font-weight:700;',
+    'حذف منتج': 'color:var(--wine-deep);font-weight:700;'
+  };
+  document.getElementById('movementsTable').innerHTML = `
+    <thead><tr><th>النوع</th><th>التفاصيل</th><th>التاريخ</th></tr></thead>
+    <tbody>${movements.length===0 ? `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">لا توجد حركات بعد</td></tr>` :
+      movements.map(m=>`
+        <tr>
+          <td style="${typeColor[m.type]||''}">${m.type}</td>
+          <td>${m.description}</td>
+          <td>${m.date}</td>
         </tr>`).join('')}
     </tbody>`;
 }
@@ -798,9 +788,15 @@ async function saveProduct(){
   }
   if(id){
     const p = products.find(x=>x.id===id);
+    const oldStock = p.stock;
     Object.assign(p,{name,category,icon,barcode,price,stock,threshold});
+    if(stock !== oldStock){
+      const diff = stock - oldStock;
+      addMovement('تعديل المخزون', `"${name}": تغيرت الكمية من ${oldStock} إلى ${stock} (${diff>0?'+':''}${diff})`);
+    }
   }else{
     products.push({id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold});
+    addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
   }
   await persistProducts();
   toggleProductForm(false);
@@ -809,7 +805,9 @@ async function saveProduct(){
 }
 async function deleteProduct(id){
   if(!confirm('واش متأكد من حذف هذا المنتوج؟')) return;
+  const p = products.find(x=>x.id===id);
   products = products.filter(p=>p.id!==id);
+  if(p) addMovement('حذف منتج', `تم حذف "${p.name}" (كان بكمية ${p.stock})`);
   await persistProducts();
   renderAdmin(); renderProducts();
   showToast('تم حذف المنتوج');
