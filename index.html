@@ -144,6 +144,7 @@
   .overlay{ position:fixed; inset:0; background:rgba(27,42,65,0.45); z-index:100; display:none; align-items:center; justify-content:center; }
   .overlay.show{ display:flex; }
   .modal-box{ background:var(--paper); width:min(420px,92vw); border-radius:var(--radius); padding:22px; box-shadow:0 20px 50px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto; }
+  #receiptOverlay .modal-box{ width:min(720px,95vw); }
   .drawer-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
   .close-x{ background:none; border:none; font-size:22px; cursor:pointer; color:var(--ink); }
   .field{ margin-bottom:12px; display:flex; flex-direction:column; gap:6px; }
@@ -152,13 +153,32 @@
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .login-box{ text-align:center; }
 
-  /* Receipt */
+  /* Receipt (on-screen preview inside the modal) */
   .receipt{ background:#fff; font-family:'IBM Plex Sans Arabic'; font-size:13px; padding:10px 4px; }
   .receipt h2{ text-align:center; margin:0 0 2px; font-size:20px; }
   .receipt .sub{ text-align:center; font-size:12px; color:var(--ink-soft); margin-bottom:10px; }
   .receipt hr{ border:none; border-top:1px dashed #ccc; margin:8px 0; }
   .receipt-line{ display:flex; justify-content:space-between; margin-bottom:4px; }
   .receipt-total{ display:flex; justify-content:space-between; font-weight:900; font-size:16px; }
+
+  /* ===== A4 invoice layout — used when printing the receipt/quote on A4 paper ===== */
+  .invoice-a4{ background:#fff; font-family:'IBM Plex Sans Arabic'; color:var(--ink); padding:6mm; }
+  .inv-header{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--ink); padding-bottom:14px; margin-bottom:16px; }
+  .inv-logo{ font-family:'Markazi Text',serif; font-weight:700; font-size:26px; }
+  .inv-logo .sub-logo{ display:block; font-family:'Tajawal'; font-weight:400; font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .inv-title{ text-align:left; }
+  .inv-title .inv-title-main{ font-size:20px; font-weight:900; color:var(--wine); }
+  .inv-meta{ text-align:left; font-size:12.5px; color:var(--ink-soft); margin-top:6px; line-height:1.7; }
+  .inv-table{ width:100%; border-collapse:collapse; margin-bottom:16px; }
+  .inv-table th{ background:var(--paper-deep); text-align:right; padding:9px 10px; font-size:13px; border:1px solid var(--paper-deep); }
+  .inv-table td{ padding:8px 10px; font-size:13px; border:1px solid var(--paper-deep); }
+  .inv-table td.center, .inv-table th.center{ text-align:center; }
+  .inv-summary{ width:280px; margin-inline-start:auto; }
+  .inv-summary-row{ display:flex; justify-content:space-between; padding:6px 4px; font-size:13.5px; color:var(--ink-soft); }
+  .inv-summary-row.discount{ color:var(--wine-deep); }
+  .inv-summary-total{ display:flex; justify-content:space-between; padding:10px 4px; font-size:19px; font-weight:900; color:var(--ink); border-top:2px solid var(--ink); margin-top:4px; }
+  .inv-footer{ margin-top:30px; text-align:center; font-size:12.5px; color:var(--ink-soft); border-top:1px dashed var(--paper-deep); padding-top:14px; }
+  .inv-note{ margin-top:16px; padding:10px 14px; background:#FBEBD3; border:1px solid #E7C57A; border-radius:8px; font-size:12.5px; color:#8A5A16; }
 
   /* ===== Admin / Reports view ===== */
   .admin-scroll{ flex:1; overflow-y:auto; padding:20px 24px; }
@@ -176,14 +196,62 @@
   th{ background:var(--paper-deep); font-weight:700; }
   .icon-del{ background:none; border:none; cursor:pointer; font-size:15px; color:var(--wine-deep); }
 
+  /* Admin sub-navigation: separates "التقارير" from "تنبيهات المخزون" */
+  .admin-subtabs{ display:flex; gap:8px; }
+  .admin-subtab-btn{
+    border:2px solid var(--paper-deep); background:#fff; color:var(--ink);
+    border-radius:9px; padding:9px 16px; font-family:'Tajawal'; font-weight:700;
+    font-size:14px; cursor:pointer; display:flex; align-items:center; gap:6px;
+  }
+  .admin-subtab-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .admin-subtab-btn .badge-count{
+    background:var(--wine-deep); color:#fff; border-radius:20px; font-size:11px;
+    padding:1px 7px; font-family:'IBM Plex Sans Arabic';
+  }
+  .stock-page-head{ text-align:center; margin-bottom:18px; }
+  .stock-page-head h2{ margin:0 0 4px; }
+  .stock-page-head p{ margin:0; color:var(--ink-soft); font-size:14px; }
+
+  /* Discount inputs */
+  .line-discount-row{ display:flex; align-items:center; gap:4px; margin-top:4px; }
+  .line-discount-row .ld-label{ font-size:11px; color:var(--ink-soft); }
+  .line-discount-input{
+    width:46px; padding:3px 4px; border-radius:6px; border:1px solid var(--paper-deep);
+    font-family:'IBM Plex Sans Arabic'; font-size:12px; text-align:center;
+  }
+  .overall-discount-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-bottom:8px; padding:8px 10px; background:var(--paper); border-radius:8px;
+  }
+  .overall-discount-row label{ font-size:13px; font-weight:700; color:var(--ink); }
+  .overall-discount-row input{
+    width:70px; padding:6px 8px; border-radius:7px; border:1px solid var(--paper-deep);
+    font-family:'IBM Plex Sans Arabic'; font-size:14px; text-align:center; font-weight:700;
+  }
+  .discount-amount-row{ color:var(--wine-deep) !important; }
+
+  /* Sales date-range filter bar (Admin & Reports) */
+  .date-range-bar{
+    display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
+    background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:14px 16px; margin-bottom:14px;
+  }
+  .drb-field{ display:flex; flex-direction:column; gap:5px; }
+  .drb-field label{ font-size:12.5px; font-weight:700; color:var(--ink-soft); }
+  .drb-field input, .drb-field select{
+    padding:9px 12px; border-radius:8px; border:1px solid var(--paper-deep);
+    font-family:'Tajawal'; font-size:14px; min-width:150px;
+  }
+
   .toast{ position:fixed; bottom:22px; left:22px; background:var(--ink); color:var(--paper); padding:13px 20px; border-radius:10px; box-shadow:var(--shadow); z-index:200; display:none; font-size:14px; font-weight:700; }
   .toast.show{ display:block; animation: fadein .2s ease; }
   @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
   @media print{
+    @page{ size:A4; margin:14mm; }
     body *{ visibility:hidden; }
     #printArea, #printArea *{ visibility:visible; }
-    #printArea{ position:absolute; top:0; right:0; width:300px; }
+    #printArea{ position:absolute; top:0; right:0; left:0; width:100%; }
   }
   @media (max-width: 860px){
     .order-side{ width:320px; flex-basis:320px; }
@@ -242,7 +310,15 @@
       <div class="order-list" id="orderList"></div>
       <div class="order-summary">
         <div class="sum-row"><span>عدد القطع</span><span class="nums" id="itemCount">0</span></div>
-        <div class="sum-row total"><span>المجموع</span><span class="nums" id="orderTotal">0 د.م</span></div>
+        <div class="sum-row"><span>المجموع الفرعي</span><span class="nums" id="subTotalDisplay">0 د.م</span></div>
+
+        <div class="overall-discount-row">
+          <label for="overallDiscountInput">نسبة تخفيض على المجموع</label>
+          <input type="number" id="overallDiscountInput" class="nums" min="0" max="100" value="0" oninput="setOverallDiscount(this.value)">
+        </div>
+
+        <div class="sum-row discount-amount-row" id="discountAmountRow" style="display:none;"><span>قيمة التخفيض</span><span class="nums" id="discountAmountDisplay">0 د.م</span></div>
+        <div class="sum-row total"><span>المجموع النهائي</span><span class="nums" id="orderTotal">0 د.م</span></div>
 
         <button class="btn btn-primary" id="finishSaleBtn" onclick="finishSale()" disabled>إنهاء البيع</button>
         <button class="btn btn-outline" id="quoteBtn" onclick="generateQuote()" disabled style="width:100%;margin-top:8px;">📋 تسعيرة فقط (بدون بيع)</button>
@@ -255,39 +331,83 @@
       <div id="adminPanel" style="display:block;">
         <div class="section-head">
           <h2 style="margin:0;">لوحة الإدارة</h2>
+          <div class="admin-subtabs">
+            <button class="admin-subtab-btn active" id="adminSubReportsBtn" onclick="showAdminSub('reports')">📊 التقارير</button>
+            <button class="admin-subtab-btn" id="adminSubStockBtn" onclick="showAdminSub('stock')">⚠️ تنبيهات المخزون <span class="badge-count" id="stockBadgeCount">0</span></button>
+          </div>
         </div>
-        <div class="stat-grid" id="statGrid"></div>
-        <div id="lowStockAlertWrap"></div>
 
-        <div class="section-head">
-          <h3 style="margin:0;">إدارة المستخدمين (اليوزر والكود ديال كل جهاز)</h3>
-          <button class="btn btn-gold" onclick="openUserForm()">+ إضافة مستخدم</button>
-        </div>
-        <div class="table-wrap"><table id="usersTable"></table></div>
+        <!-- ===== صفحة التقارير (بدون قائمة المنتوجات الناقصة) ===== -->
+        <div id="adminReportsView">
+          <div class="section-head">
+            <h3 style="margin:0;">نظرة عامة</h3>
+            <button class="btn btn-danger-outline" style="width:auto;margin:0;" onclick="resetAccountsToZero()">🔄 تصفير الحسابات</button>
+          </div>
+          <div class="stat-grid" id="statGrid"></div>
 
-        <div class="section-head">
-          <h3 style="margin:0;">إدارة المنتوجات</h3>
-          <button class="btn btn-gold" onclick="openProductForm()">+ إضافة منتوج</button>
-        </div>
-        <div class="table-wrap"><table id="productsTable"></table></div>
+          <div class="section-head">
+            <h3 style="margin:0;">إدارة المستخدمين (اليوزر والكود ديال كل جهاز)</h3>
+            <button class="btn btn-gold" onclick="openUserForm()">+ إضافة مستخدم</button>
+          </div>
+          <div class="table-wrap"><table id="usersTable"></table></div>
 
-        <div class="section-head">
-          <h3 style="margin:0;">المبيعات حسب المستخدم</h3>
-        </div>
-        <div class="table-wrap"><table id="salesByUserTable"></table></div>
+          <div class="section-head">
+            <h3 style="margin:0;">سجل المبيعات</h3>
+          </div>
+          <div class="date-range-bar">
+            <div class="drb-field">
+              <label>من تاريخ</label>
+              <input type="date" id="salesFromDate" onchange="renderAdmin()">
+            </div>
+            <div class="drb-field">
+              <label>إلى تاريخ</label>
+              <input type="date" id="salesToDate" onchange="renderAdmin()">
+            </div>
+            <div class="drb-field">
+              <label>الكاشير</label>
+              <select id="salesUserFilter" onchange="renderAdmin()">
+                <option value="">كل المستخدمين</option>
+              </select>
+            </div>
+            <button class="btn btn-outline" style="align-self:flex-end;" onclick="clearSalesFilters()">مسح الفلترة</button>
+          </div>
+          <div class="stat-grid" id="periodStatGrid" style="margin-bottom:14px;"></div>
+          <div class="table-wrap"><table id="salesTable"></table></div>
 
-        <div class="section-head">
-          <h3 style="margin:0;">سجل المبيعات</h3>
-          <select id="salesUserFilter" onchange="renderAdmin()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--paper-deep);font-family:'Tajawal';">
-            <option value="">كل المستخدمين</option>
-          </select>
-        </div>
-        <div class="table-wrap"><table id="salesTable"></table></div>
+          <div class="section-head">
+            <h3 style="margin:0;">إدارة المنتوجات</h3>
+            <button class="btn btn-gold" onclick="openProductForm()">+ إضافة منتوج</button>
+          </div>
+          <div class="search-row" style="margin-bottom:10px;">
+            <input type="text" id="adminProductSearch" placeholder="🔍 ابحث بالباركود أو باسم المنتوج للعثور عليه أو إضافته بسهولة..." oninput="renderAdmin()">
+          </div>
+          <div class="table-wrap"><table id="productsTable"></table></div>
 
-        <div class="section-head">
-          <h3 style="margin:0;">سجل الحركة</h3>
+          <div class="section-head">
+            <h3 style="margin:0;">المبيعات حسب المستخدم</h3>
+          </div>
+          <div class="table-wrap"><table id="salesByUserTable"></table></div>
+
+          <div class="section-head">
+            <h3 style="margin:0;">سجل الحركة</h3>
+          </div>
+          <div class="table-wrap"><table id="movementsTable"></table></div>
+
+          <div class="section-head">
+            <h3 style="margin:0;">📦 أرشيف الحسابات المصفرة</h3>
+          </div>
+          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">هنا كتبقى محفوظة كل المبيعات القديمة كل مرة تدير فيها "تصفير الحسابات"، باش ماتضيعش البيانات.</p>
+          <div id="archiveWrap"></div>
         </div>
-        <div class="table-wrap"><table id="movementsTable"></table></div>
+
+        <!-- ===== صفحة منفصلة: تنبيهات المخزون (منتوجات في طريقها للنفاد) ===== -->
+        <div id="adminStockView" style="display:none;">
+          <div class="stock-page-head">
+            <h2>⚠️ المنتوجات في طريقها للنفاد</h2>
+            <p>هذه لائحة منفصلة عن صفحة التقارير، تجمع كل المنتوجات التي وصلت أو اقتربت من حد التنبيه المحدد لها</p>
+          </div>
+          <div id="lowStockAlertWrap"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -362,7 +482,7 @@
     </div>
     <div class="receipt" id="printArea"></div>
     <div style="display:flex; gap:10px; margin-top:14px;">
-      <button class="btn btn-outline" style="flex:1;" onclick="window.print()">🖨️ طباعة</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="window.print()">🖨️ طباعة (ورق A4)</button>
       <button class="btn btn-primary" style="flex:1;" onclick="closeReceipt()" id="receiptCloseBtn">بيع جديد</button>
     </div>
   </div>
@@ -399,14 +519,18 @@
 const CATEGORIES = ["الكل","كتب","أقلام","أدوات مكتبية","قرطاسية"];
 let products = [];
 let sales = [];
+let archivedSales = []; // batches of sales tucked away here whenever "تصفير الحسابات" is used, so nothing is lost
 let movements = [];
 let users = [];
 let currentUser = null;
 let order = {}; // {productId: qty}
+let orderDiscount = {}; // {productId: percent 0-100} discount applied per product line
+let overallDiscountPercent = 0; // discount percent applied on the whole order subtotal
 let activeCategory = "الكل";
 let searchTerm = "";
 let isAdmin = false;
 let lastReceiptData = null;
+let adminSubView = 'reports'; // 'reports' | 'stock' — controls which admin sub-page is visible
 
 const defaultUsers = [
   {id:"u1", name:"عبد لطيف (المدير)", username:"admin", password:"Younes@2005", role:"admin"}
@@ -482,6 +606,7 @@ async function loadData(){
       const data = snap.data();
       products = data.products || defaultProducts;
       sales = data.sales || [];
+      archivedSales = data.archivedSales || [];
       movements = data.movements || [];
       users = (data.users && data.users.length) ? data.users : defaultUsers;
       if(!data.users || !data.users.length){
@@ -490,9 +615,10 @@ async function loadData(){
     }else{
       products = defaultProducts;
       sales = [];
+      archivedSales = [];
       movements = [];
       users = defaultUsers;
-      await setDoc(storeRef, {products, sales, movements, users});
+      await setDoc(storeRef, {products, sales, archivedSales, movements, users});
     }
   }catch(e){
     console.error(e);
@@ -520,6 +646,7 @@ function listenRealtime(){
     const data = snap.data();
     if(data.products) products = data.products;
     if(data.sales) sales = data.sales;
+    if(data.archivedSales) archivedSales = data.archivedSales;
     if(data.movements) movements = data.movements;
     if(data.users && data.users.length) users = data.users;
     renderProducts();
@@ -551,6 +678,11 @@ async function persistUsers(){
   const { setDoc, storeRef } = window.__fb;
   try{ await setDoc(storeRef, {users}, {merge:true}); }
   catch(e){ showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); }
+}
+async function persistArchive(){
+  const { setDoc, storeRef } = window.__fb;
+  try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); }
+  catch(e){ showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); }
 }
 function addMovement(type, description){
   movements.unshift({
@@ -651,28 +783,75 @@ function addToOrder(id){
 function changeOrderQty(id, delta){
   const p = products.find(x=>x.id===id);
   let q = (order[id]||0)+delta;
-  if(q<=0) delete order[id];
+  if(q<=0){ delete order[id]; delete orderDiscount[id]; }
   else if(q>p.stock){ showToast('الكمية المطلوبة تفوق المخزون'); return; }
   else order[id]=q;
   renderOrder();
 }
-function removeLine(id){ delete order[id]; renderOrder(); }
-function clearOrder(){ order={}; renderOrder(); }
-
-function orderTotal(){
-  return Object.keys(order).reduce((sum,id)=>{
-    const p = products.find(x=>x.id===id);
-    return sum + (p ? p.price*order[id] : 0);
-  },0);
+function removeLine(id){ delete order[id]; delete orderDiscount[id]; renderOrder(); }
+function clearOrder(){
+  order={};
+  orderDiscount={};
+  overallDiscountPercent = 0;
+  const overallInput = document.getElementById('overallDiscountInput');
+  if(overallInput) overallInput.value = 0;
+  renderOrder();
 }
+
+function clampPercent(val){
+  let n = parseFloat(val);
+  if(isNaN(n) || n<0) n = 0;
+  if(n>100) n = 100;
+  return n;
+}
+function setLineDiscount(id, val){
+  orderDiscount[id] = clampPercent(val);
+  renderOrder();
+}
+function setOverallDiscount(val){
+  overallDiscountPercent = clampPercent(val);
+  renderOrder();
+}
+
+// price of a single line AFTER its own per-product discount, BEFORE the overall discount
+function lineSubtotal(id){
+  const p = products.find(x=>x.id===id);
+  if(!p) return 0;
+  const qty = order[id]||0;
+  const discount = orderDiscount[id]||0;
+  return p.price*qty*(1-discount/100);
+}
+// sum of all lines after per-product discounts, before the overall discount
+function orderSubtotal(){
+  return Object.keys(order).reduce((sum,id)=> sum + lineSubtotal(id), 0);
+}
+// final total after applying the overall discount on top of the subtotal
+function orderFinalTotal(){
+  const subtotal = orderSubtotal();
+  return subtotal*(1-overallDiscountPercent/100);
+}
+function orderTotal(){ return orderFinalTotal(); }
 
 function renderOrder(){
   const ids = Object.keys(order);
   const list = document.getElementById('orderList');
   const count = ids.reduce((s,id)=>s+order[id],0);
   document.getElementById('itemCount').textContent = count;
-  const total = orderTotal();
-  document.getElementById('orderTotal').textContent = total + ' د.م';
+
+  const subtotal = orderSubtotal();
+  const finalTotal = orderFinalTotal();
+  const discountAmount = subtotal - finalTotal;
+
+  document.getElementById('subTotalDisplay').textContent = subtotal.toFixed(2) + ' د.م';
+  document.getElementById('orderTotal').textContent = finalTotal.toFixed(2) + ' د.م';
+
+  const discRow = document.getElementById('discountAmountRow');
+  if(discountAmount > 0.001){
+    discRow.style.display = 'flex';
+    document.getElementById('discountAmountDisplay').textContent = '- ' + discountAmount.toFixed(2) + ' د.م';
+  }else{
+    discRow.style.display = 'none';
+  }
 
   if(ids.length===0){
     list.innerHTML = `<div class="order-empty"><span class="mark">🧾</span>لم تتم إضافة أي منتوج بعد</div>`;
@@ -680,19 +859,25 @@ function renderOrder(){
     list.innerHTML = ids.map(id=>{
       const p = products.find(x=>x.id===id);
       if(!p) return '';
+      const discount = orderDiscount[id]||0;
       return `
         <div class="order-line">
           <div class="icon-circle">${p.icon}</div>
           <div style="flex:1;">
             <div class="oname">${p.name}</div>
             <div class="oprice nums">${p.price} د.م</div>
+            <div class="line-discount-row">
+              <span class="ld-label">خصم على المنتوج</span>
+              <input type="number" class="line-discount-input nums" min="0" max="100" value="${discount}" onchange="setLineDiscount('${id}', this.value)">
+              <span class="ld-label">%</span>
+            </div>
           </div>
           <div class="qty-ctrl">
             <button class="qty-btn" onclick="changeOrderQty('${id}',-1)">−</button>
             <span class="nums">${order[id]}</span>
             <button class="qty-btn" onclick="changeOrderQty('${id}',1)">+</button>
           </div>
-          <div class="line-total nums">${p.price*order[id]}</div>
+          <div class="line-total nums">${lineSubtotal(id).toFixed(2)}</div>
           <button class="remove-x" onclick="removeLine('${id}')">✕</button>
         </div>
       `;
@@ -708,13 +893,15 @@ function renderOrder(){
 function generateQuote(){
   const ids = Object.keys(order);
   if(ids.length===0) return;
-  const total = orderTotal();
+  const subtotal = orderSubtotal();
+  const total = orderFinalTotal();
   const items = ids.map(id=>{
     const p = products.find(x=>x.id===id);
-    return {name:p.name, icon:p.icon, qty:order[id], price:p.price, lineTotal:p.price*order[id]};
+    const discount = orderDiscount[id]||0;
+    return {name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal:lineSubtotal(id)};
   });
   const quote = {
-    items, total,
+    items, subtotal, overallDiscountPercent, total,
     date: new Date().toLocaleString('ar-MA')
   };
   showQuote(quote);
@@ -726,16 +913,38 @@ function showQuote(quote){
   document.getElementById('receiptModalTitle').textContent = '📋 تسعيرة (بدون بيع)';
   document.getElementById('receiptCloseBtn').textContent = 'إغلاق';
   document.getElementById('printArea').innerHTML = `
-    <h2>📚 مكتبة منار</h2>
-    <div class="sub">تسعيرة تقديرية — ${quote.date}</div>
-    <hr>
-    ${quote.items.map(i=>`
-      <div class="receipt-line"><span>${i.icon} ${i.name} × ${i.qty}</span><span class="nums">${i.lineTotal} د.م</span></div>
-    `).join('')}
-    <hr>
-    <div class="receipt-total"><span>المجموع التقديري</span><span class="nums">${quote.total} د.م</span></div>
-    <hr>
-    <div class="sub" style="margin-top:8px;">⚠️ هذه تسعيرة فقط وليست فاتورة بيع، والأسعار قابلة للتغيير</div>
+    <div class="invoice-a4">
+      <div class="inv-header">
+        <div class="inv-logo">📚 مكتبة منار<span class="sub-logo">قرطاسية وكتب</span></div>
+        <div class="inv-title">
+          <div class="inv-title-main">تسعيرة تقديرية</div>
+          <div class="inv-meta">
+            <div>التاريخ: ${quote.date}</div>
+          </div>
+        </div>
+      </div>
+      <table class="inv-table">
+        <thead><tr><th>#</th><th>المنتوج</th><th class="center">السعر</th><th class="center">الكمية</th><th class="center">الخصم</th><th class="center">المجموع</th></tr></thead>
+        <tbody>
+          ${quote.items.map((i,idx)=>`
+            <tr>
+              <td class="center">${idx+1}</td>
+              <td>${i.icon} ${i.name}</td>
+              <td class="center nums">${i.price} د.م</td>
+              <td class="center nums">${i.qty}</td>
+              <td class="center nums">${i.discount>0?i.discount+'%':'—'}</td>
+              <td class="center nums">${i.lineTotal.toFixed(2)} د.م</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="inv-summary">
+        <div class="inv-summary-row"><span>المجموع الفرعي</span><span class="nums">${quote.subtotal.toFixed(2)} د.م</span></div>
+        ${quote.overallDiscountPercent>0 ? `<div class="inv-summary-row discount"><span>خصم على المجموع (${quote.overallDiscountPercent}%)</span><span class="nums">- ${(quote.subtotal-quote.total).toFixed(2)} د.م</span></div>` : ''}
+        <div class="inv-summary-total"><span>المجموع التقديري</span><span class="nums">${quote.total.toFixed(2)} د.م</span></div>
+      </div>
+      <div class="inv-note">⚠️ هذه تسعيرة تقديرية فقط وليست فاتورة بيع، والأسعار قابلة للتغيير</div>
+      <div class="inv-footer">مكتبة منار — شكرا لثقتكم 🌿</div>
+    </div>
   `;
   document.getElementById('receiptOverlay').classList.add('show');
 }
@@ -743,22 +952,26 @@ function showQuote(quote){
 async function finishSale(){
   const ids = Object.keys(order);
   if(ids.length===0) return;
-  const total = orderTotal();
+  const subtotal = orderSubtotal();
+  const total = orderFinalTotal();
 
   const items = ids.map(id=>{
     const p = products.find(x=>x.id===id);
+    const discount = orderDiscount[id]||0;
+    const lineTotal = lineSubtotal(id);
     p.stock -= order[id];
-    return {name:p.name, icon:p.icon, qty:order[id], price:p.price, lineTotal:p.price*order[id]};
+    return {name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal};
   });
   const sale = {
     id: 's'+Date.now(),
-    items, total,
+    items, subtotal, overallDiscountPercent, total,
     cashierUsername: currentUser ? currentUser.username : 'غير معروف',
     cashierName: currentUser ? currentUser.name : 'غير معروف',
-    date: new Date().toLocaleString('ar-MA')
+    date: new Date().toLocaleString('ar-MA'),
+    timestamp: Date.now()
   };
   sales.unshift(sale);
-  addMovement('بيع', `عملية بيع بقيمة ${total} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})`);
+  addMovement('بيع', `عملية بيع بقيمة ${total.toFixed(2)} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})`);
 
   await persistProducts();
   await persistSales();
@@ -767,23 +980,52 @@ async function finishSale(){
   lastReceiptData = sale;
   showReceipt(sale);
   order = {};
+  orderDiscount = {};
+  overallDiscountPercent = 0;
+  const overallInput = document.getElementById('overallDiscountInput');
+  if(overallInput) overallInput.value = 0;
   renderOrder();
 }
 
 function showReceipt(sale){
   document.getElementById('receiptModalTitle').textContent = 'تم البيع ✅';
   document.getElementById('receiptCloseBtn').textContent = 'بيع جديد';
+  const subtotal = sale.subtotal!=null ? sale.subtotal : sale.total;
+  const overallDisc = sale.overallDiscountPercent || 0;
   document.getElementById('printArea').innerHTML = `
-    <h2>📚 مكتبة منار</h2>
-    <div class="sub">فاتورة بيع — ${sale.date}</div>
-    <hr>
-    ${sale.items.map(i=>`
-      <div class="receipt-line"><span>${i.icon} ${i.name} × ${i.qty}</span><span class="nums">${i.lineTotal} د.م</span></div>
-    `).join('')}
-    <hr>
-    <div class="receipt-total"><span>المجموع</span><span class="nums">${sale.total} د.م</span></div>
-    <hr>
-    <div class="sub" style="margin-top:8px;">شكرا لزيارتكم 🌿</div>
+    <div class="invoice-a4">
+      <div class="inv-header">
+        <div class="inv-logo">📚 مكتبة منار<span class="sub-logo">قرطاسية وكتب</span></div>
+        <div class="inv-title">
+          <div class="inv-title-main">فاتورة بيع</div>
+          <div class="inv-meta">
+            <div>رقم البيع: ${sale.id}</div>
+            <div>التاريخ: ${sale.date}</div>
+            <div>الكاشير: ${sale.cashierName||'—'}</div>
+          </div>
+        </div>
+      </div>
+      <table class="inv-table">
+        <thead><tr><th>#</th><th>المنتوج</th><th class="center">السعر</th><th class="center">الكمية</th><th class="center">الخصم</th><th class="center">المجموع</th></tr></thead>
+        <tbody>
+          ${sale.items.map((i,idx)=>`
+            <tr>
+              <td class="center">${idx+1}</td>
+              <td>${i.icon} ${i.name}</td>
+              <td class="center nums">${i.price} د.م</td>
+              <td class="center nums">${i.qty}</td>
+              <td class="center nums">${i.discount>0?i.discount+'%':'—'}</td>
+              <td class="center nums">${(+i.lineTotal).toFixed(2)} د.م</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="inv-summary">
+        <div class="inv-summary-row"><span>المجموع الفرعي</span><span class="nums">${(+subtotal).toFixed(2)} د.م</span></div>
+        ${overallDisc>0 ? `<div class="inv-summary-row discount"><span>خصم على المجموع (${overallDisc}%)</span><span class="nums">- ${(subtotal-sale.total).toFixed(2)} د.م</span></div>` : ''}
+        <div class="inv-summary-total"><span>المجموع</span><span class="nums">${(+sale.total).toFixed(2)} د.م</span></div>
+      </div>
+      <div class="inv-footer">مكتبة منار — شكرا لزيارتكم 🌿</div>
+    </div>
   `;
   document.getElementById('receiptOverlay').classList.add('show');
 }
@@ -791,22 +1033,106 @@ function closeReceipt(){ document.getElementById('receiptOverlay').classList.rem
 
 /* ===== Admin ===== */
 
+// switches between the reports sub-page and the separate low-stock alerts sub-page,
+// so low-stock products never show up mixed into the main reports page
+function showAdminSub(view){
+  adminSubView = view;
+  document.getElementById('adminReportsView').style.display = view==='reports' ? 'block' : 'none';
+  document.getElementById('adminStockView').style.display = view==='stock' ? 'block' : 'none';
+  document.getElementById('adminSubReportsBtn').classList.toggle('active', view==='reports');
+  document.getElementById('adminSubStockBtn').classList.toggle('active', view==='stock');
+}
+
+// "تصفير الحسابات": zeroes out the live sales stats/counters shown in the dashboard,
+// but nothing is actually deleted — the current sales get tucked into an archive batch first
+async function resetAccountsToZero(){
+  if(sales.length===0){ showToast('لا توجد بيانات مبيعات للتصفير حاليا'); return; }
+  const total = sales.reduce((s,x)=>s+x.total,0);
+  const ok = confirm(`واش متأكد من تصفير الحسابات؟\nغادي يتصفر عدد المبيعات والمجموع في لوحة الإدارة (${sales.length} عملية بقيمة ${total.toFixed(2)} د.م)، لكن هاذ البيانات غادي تتحفظ فـ"أرشيف الحسابات المصفرة" ومغاديش تضيع.`);
+  if(!ok) return;
+
+  const batch = {
+    id: 'arc'+Date.now(),
+    archivedAt: new Date().toLocaleString('ar-MA'),
+    count: sales.length,
+    total,
+    items: sales.slice()
+  };
+  archivedSales.unshift(batch);
+  addMovement('تصفير الحسابات', `تم تصفير ${sales.length} عملية بيع بقيمة إجمالية ${total.toFixed(2)} د.م، وتم حفظها في الأرشيف`);
+  sales = [];
+
+  await persistArchive();
+  clearSalesFilters(); // also re-renders admin
+  showToast('تم تصفير الحسابات، والبيانات القديمة محفوظة في الأرشيف 📦');
+}
+
+// renders the read-only archive of past resets, each expandable to see its original sales
+function renderArchiveSection(){
+  const wrap = document.getElementById('archiveWrap');
+  if(!wrap) return;
+  if(archivedSales.length===0){
+    wrap.innerHTML = `<div class="table-wrap"><table><tbody><tr><td style="text-align:center;color:var(--ink-soft);padding:16px;">لا توجد بيانات مؤرشفة بعد</td></tr></tbody></table></div>`;
+    return;
+  }
+  wrap.innerHTML = archivedSales.map(batch=>`
+    <details class="table-wrap" style="margin-bottom:10px;">
+      <summary style="cursor:pointer;padding:12px 16px;font-weight:700;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span>📦 أرشيف بتاريخ ${batch.archivedAt}</span>
+        <span class="nums">${batch.count} عملية — ${batch.total.toFixed(2)} د.م</span>
+      </summary>
+      <table>
+        <thead><tr><th>الكاشير</th><th>المنتوجات</th><th>المجموع</th><th>التاريخ</th></tr></thead>
+        <tbody>
+          ${batch.items.map(s=>`
+            <tr>
+              <td>${s.cashierName||'—'}</td>
+              <td>${s.items.map(i=>`${i.name} ×${i.qty}`).join('، ')}</td>
+              <td class="nums">${s.total} د.م</td>
+              <td>${s.date}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </details>
+  `).join('');
+}
+
 function renderAdmin(){
   const lowStock = products.filter(p=>p.stock<=p.threshold);
   const totalRevenue = sales.reduce((s,x)=>s+x.total,0);
 
   document.getElementById('statGrid').innerHTML = `
     <div class="stat-card"><div class="num nums">${products.length}</div><div class="lbl">عدد المنتوجات</div></div>
-    <div class="stat-card" style="border-color:#C0392B;"><div class="num nums">${lowStock.length}</div><div class="lbl">تنبيهات المخزون</div></div>
+    <div class="stat-card" style="border-color:#C0392B;cursor:pointer;" onclick="showAdminSub('stock')"><div class="num nums">${lowStock.length}</div><div class="lbl">تنبيهات المخزون (اضغط للتفاصيل)</div></div>
     <div class="stat-card"><div class="num nums">${sales.length}</div><div class="lbl">عدد عمليات البيع</div></div>
-    <div class="stat-card"><div class="num nums">${totalRevenue}</div><div class="lbl">إجمالي المبيعات (د.م)</div></div>
+    <div class="stat-card"><div class="num nums">${totalRevenue.toFixed(2)}</div><div class="lbl">إجمالي المبيعات (د.م)</div></div>
   `;
 
+  // badge on the sub-tab button that opens the separate low-stock page
+  const stockBadge = document.getElementById('stockBadgeCount');
+  if(stockBadge) stockBadge.textContent = lowStock.length;
+
+  // low-stock products now live only on their own separate sub-page (adminStockView),
+  // not mixed into the main reports page
   const alertWrap = document.getElementById('lowStockAlertWrap');
-  alertWrap.innerHTML = lowStock.length===0 ? '' : `
-    <div class="alert-box">
-      <h3>⚠️ تنبيه: منتوجات في طريقها للنفاد</h3>
-      ${lowStock.map(p=>`<div class="alert-row"><span>${p.icon} ${p.name}</span><span><b>${p.stock}</b> متبقي من ${p.threshold}</span></div>`).join('')}
+  alertWrap.innerHTML = lowStock.length===0 ? `
+    <div class="alert-box" style="text-align:center;border-color:var(--green-ok);background:#EAF4EC;">
+      <h3 style="color:var(--green-ok);">✅ لا توجد منتوجات ناقصة حاليا</h3>
+    </div>` : `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>المنتوج</th><th>الفئة</th><th>الكمية المتبقية</th><th>حد التنبيه</th><th>الحالة</th></tr></thead>
+        <tbody>
+          ${lowStock.map(p=>`
+            <tr>
+              <td>${p.icon} ${p.name}</td>
+              <td>${p.category}</td>
+              <td class="nums"><b>${p.stock}</b></td>
+              <td class="nums">${p.threshold}</td>
+              <td>${p.stock<=0 ? '<span style="color:var(--wine-deep);font-weight:700;">نفدت الكمية</span>' : '<span style="color:#8A5A16;font-weight:700;">قاربت على النفاد</span>'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
     </div>`;
 
   document.getElementById('usersTable').innerHTML = `
@@ -824,9 +1150,20 @@ function renderAdmin(){
       </tr>`).join('')}
     </tbody>`;
 
+  // barcode/name search — helps find a product fast, or spot that it doesn't exist yet so it can be added quickly
+  const adminSearchEl = document.getElementById('adminProductSearch');
+  const adminSearchTerm = adminSearchEl ? adminSearchEl.value.trim().toLowerCase() : '';
+  const filteredProducts = adminSearchTerm ? products.filter(p=>
+    p.name.toLowerCase().includes(adminSearchTerm) || (p.barcode||'').toLowerCase().includes(adminSearchTerm)
+  ) : products;
+
   document.getElementById('productsTable').innerHTML = `
     <thead><tr><th>المنتوج</th><th>الباركود</th><th>الفئة</th><th>السعر</th><th>المخزون</th><th></th></tr></thead>
-    <tbody>${products.map(p=>`
+    <tbody>${filteredProducts.length===0 ? `
+      <tr><td colspan="6" style="text-align:center;padding:18px;color:var(--ink-soft);">
+        لا يوجد منتوج بهذا الباركود أو الاسم
+        ${adminSearchTerm ? `<div style="margin-top:10px;"><button class="btn btn-gold" onclick="openProductForm(); document.getElementById('pfBarcode').value=document.getElementById('adminProductSearch').value.trim();">+ إضافة منتوج بهذا الباركود</button></div>` : ''}
+      </td></tr>` : filteredProducts.map(p=>`
       <tr>
         <td>${p.icon} ${p.name}</td>
         <td class="nums">${p.barcode||'—'}</td>
@@ -869,10 +1206,19 @@ function renderAdmin(){
       return `<option value="${u}" ${u===currentFilter?'selected':''}>${uname}</option>`;
     }).join('');
 
-  const filteredSales = currentFilter ? sales.filter(s=>s.cashierUsername===currentFilter) : sales;
+  const filteredSales = getFilteredSales();
+
+  const periodCount = filteredSales.length;
+  const periodRevenue = filteredSales.reduce((s,x)=>s+x.total,0);
+  const hasFilter = document.getElementById('salesFromDate').value || document.getElementById('salesToDate').value || currentFilter;
+  document.getElementById('periodStatGrid').innerHTML = `
+    <div class="stat-card"><div class="num nums">${periodCount}</div><div class="lbl">${hasFilter?'عدد المبيعات في الفترة المحددة':'عدد كل المبيعات'}</div></div>
+    <div class="stat-card"><div class="num nums">${periodRevenue.toFixed(2)}</div><div class="lbl">${hasFilter?'إجمالي المبيعات في الفترة المحددة (د.م)':'إجمالي كل المبيعات (د.م)'}</div></div>
+  `;
+
   document.getElementById('salesTable').innerHTML = `
     <thead><tr><th>الكاشير</th><th>المنتوجات</th><th>المجموع</th><th>التاريخ</th></tr></thead>
-    <tbody>${filteredSales.length===0 ? `<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">لا توجد مبيعات بعد</td></tr>` :
+    <tbody>${filteredSales.length===0 ? `<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">لا توجد مبيعات فهاذ الفترة</td></tr>` :
       filteredSales.map(s=>`
         <tr>
           <td>${s.cashierName||'—'}</td>
@@ -886,7 +1232,8 @@ function renderAdmin(){
     'إضافة منتوج': 'color:var(--green-ok);font-weight:700;',
     'تعديل المخزون': 'color:var(--gold);font-weight:700;',
     'بيع': 'color:var(--ink-soft);font-weight:700;',
-    'حذف منتج': 'color:var(--wine-deep);font-weight:700;'
+    'حذف منتج': 'color:var(--wine-deep);font-weight:700;',
+    'تصفير الحسابات': 'color:var(--wine-deep);font-weight:700;'
   };
   document.getElementById('movementsTable').innerHTML = `
     <thead><tr><th>النوع</th><th>التفاصيل</th><th>التاريخ</th></tr></thead>
@@ -898,7 +1245,36 @@ function renderAdmin(){
           <td>${m.date}</td>
         </tr>`).join('')}
     </tbody>`;
+
+  renderArchiveSection();
 }
+// combines the cashier filter with the "from date" / "to date" range filter for the sales log
+function getFilteredSales(){
+  const cashierFilter = document.getElementById('salesUserFilter').value;
+  const fromVal = document.getElementById('salesFromDate').value; // "YYYY-MM-DD" or ""
+  const toVal = document.getElementById('salesToDate').value;
+
+  const fromTime = fromVal ? new Date(fromVal + 'T00:00:00').getTime() : null;
+  const toTime = toVal ? new Date(toVal + 'T23:59:59').getTime() : null;
+
+  return sales.filter(s=>{
+    if(cashierFilter && s.cashierUsername !== cashierFilter) return false;
+    if(fromTime!=null || toTime!=null){
+      // older sales recorded before this feature may not have a raw timestamp; fall back to now so they aren't silently dropped
+      const t = s.timestamp!=null ? s.timestamp : Date.now();
+      if(fromTime!=null && t < fromTime) return false;
+      if(toTime!=null && t > toTime) return false;
+    }
+    return true;
+  });
+}
+function clearSalesFilters(){
+  document.getElementById('salesFromDate').value = '';
+  document.getElementById('salesToDate').value = '';
+  document.getElementById('salesUserFilter').value = '';
+  renderAdmin();
+}
+
 function isSameDay(dateStr){
   return dateStr.split('،')[0] === new Date().toLocaleDateString('ar-MA');
 }
