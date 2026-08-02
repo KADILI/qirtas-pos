@@ -104,6 +104,14 @@
     color:#fff; font-weight:700; background:var(--wine-deep); display:inline-block;
     padding:3px 9px; border-radius:20px; font-size:11px; width:fit-content;
   }
+  .pbtn .pbook-tags{ display:flex; gap:4px; flex-wrap:wrap; }
+  .pbtn .pbook-tag{
+    font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px;
+    background:var(--paper); color:var(--ink-soft); border:1px solid var(--paper-deep);
+  }
+  .pbtn .pbook-tag.school-public{ background:#E7F0EA; color:var(--green-ok); border-color:#C7DFCC; }
+  .pbtn .pbook-tag.school-private{ background:#FBEBD3; color:#8A5A16; border-color:#E7C57A; }
+  .pbtn .pbook-tag.school-both{ background:#EAE3F5; color:#5B3D8A; border-color:#D6C7EE; }
 
   /* ===== Order side (cashier ticket) ===== */
   .order-side{
@@ -303,6 +311,7 @@
         <span class="scan-hint">يعمل مع قارئ الباركود USB</span>
       </div>
       <div class="cat-row" id="categoryRow"></div>
+      <div class="cat-row" id="bookFilterRow" style="display:none;"></div>
       <div class="search-row"><input type="text" id="searchInput" placeholder="ابحث عن منتوج بالاسم أو الباركود..."></div>
       <div class="product-scroll"><div class="pgrid" id="productGrid"></div></div>
     </div>
@@ -462,7 +471,7 @@
     <div class="row2">
       <div class="field">
         <label>الفئة</label>
-        <select id="pfCategory">
+        <select id="pfCategory" onchange="toggleBookFields()">
           <option value="كتب">كتب</option>
           <option value="أقلام">أقلام</option>
           <option value="أدوات مكتبية">أدوات مكتبية</option>
@@ -470,6 +479,16 @@
         </select>
       </div>
       <div class="field"><label>الرمز (إيموجي)</label><input type="text" id="pfIcon" placeholder="📖"></div>
+    </div>
+    <div class="row2" id="bookFieldsWrap" style="display:none;">
+      <div class="field">
+        <label>نوع المدرسة</label>
+        <select id="pfSchoolType"></select>
+      </div>
+      <div class="field">
+        <label>المستوى الدراسي</label>
+        <select id="pfLevel"></select>
+      </div>
     </div>
     <div class="field">
       <label>الباركود</label>
@@ -531,6 +550,17 @@
 
 <script>
 const CATEGORIES = ["الكل","كتب","أقلام","أدوات مكتبية","قرطاسية"];
+
+// خانات خاصة بفئة "كتب" فقط: نوع المدرسة والمستوى الدراسي حتى الباكلوريا
+const SCHOOL_TYPES = ["غير محدد","عمومي","خصوصي","كلاهما"];
+const SCHOOL_LEVELS = [
+  "غير محدد",
+  "CP",
+  "الأول ابتدائي","الثاني ابتدائي","الثالث ابتدائي","الرابع ابتدائي","الخامس ابتدائي","السادس ابتدائي",
+  "الأولى إعدادي","الثانية إعدادي","الثالثة إعدادي",
+  "الجذع المشترك","الأولى بكالوريا","الثانية بكالوريا"
+];
+
 let products = [];
 let sales = [];
 let archivedSales = []; // batches of sales tucked away here whenever "تصفير الحسابات" is used, so nothing is lost
@@ -542,19 +572,26 @@ let orderDiscount = {}; // {productId: percent 0-100} discount applied per produ
 let overallDiscountPercent = 0; // discount percent applied on the whole order subtotal
 let activeCategory = "الكل";
 let searchTerm = "";
+let bookSchoolFilter = "الكل"; // active filter for "نوع المدرسة" — only relevant when activeCategory === "كتب"
+let bookLevelFilter = "الكل";  // active filter for "المستوى الدراسي" — only relevant when activeCategory === "كتب"
 let isAdmin = false;
 let lastReceiptData = null;
 let adminSubView = 'reports'; // 'reports' | 'stock' — controls which admin sub-page is visible
+
+// ترتيب عرض الفئات فجدول "إدارة المنتوجات": كل فئة فمجموعة بحالها
+const PRODUCT_CATEGORY_ORDER = ["كتب","أقلام","أدوات مكتبية","قرطاسية"];
+const ADMIN_PRODUCTS_PAGE_SIZE = 10; // عدد المنتوجات المعروضة فكل فئة قبل الضغط على "عرض المزيد"
+let adminCatLimit = {}; // {categoryName: عدد المنتوجات المعروضة حاليا فهاذ الفئة}
 
 const defaultUsers = [
   {id:"u1", name:"عبد لطيف (المدير)", username:"admin", password:"Younes@2005", role:"admin"}
 ];
 
 const defaultProducts = [
-  {id:"p1", name:"رواية الأسود يليق بك", category:"كتب", icon:"📗", price:65, stock:14, threshold:5, barcode:"611234500011"},
-  {id:"p2", name:"مقدمة ابن خلدون", category:"كتب", icon:"📘", price:80, stock:6, threshold:5, barcode:"611234500028"},
+  {id:"p1", name:"رواية الأسود يليق بك", category:"كتب", icon:"📗", price:65, stock:14, threshold:5, barcode:"611234500011", schoolType:"غير محدد", level:"غير محدد"},
+  {id:"p2", name:"مقدمة ابن خلدون", category:"كتب", icon:"📘", price:80, stock:6, threshold:5, barcode:"611234500028", schoolType:"غير محدد", level:"غير محدد"},
   {id:"p3", name:"دفتر ملاحظات جلدي", category:"قرطاسية", icon:"📓", price:35, stock:3, threshold:5, barcode:"611234500035"},
-  {id:"p4", name:"رواية مئة عام من العزلة", category:"كتب", icon:"📙", price:70, stock:9, threshold:5, barcode:"611234500042"},
+  {id:"p4", name:"رواية مئة عام من العزلة", category:"كتب", icon:"📙", price:70, stock:9, threshold:5, barcode:"611234500042", schoolType:"غير محدد", level:"غير محدد"},
   {id:"p5", name:"قلم حبر جاف أزرق", category:"أقلام", icon:"🖊️", price:5, stock:120, threshold:20, barcode:"611234500059"},
   {id:"p6", name:"قلم رصاص HB (علبة 12)", category:"أقلام", icon:"✏️", price:18, stock:40, threshold:10, barcode:"611234500066"},
   {id:"p7", name:"أقلام تحديد ملونة (24 لون)", category:"أقلام", icon:"🖍️", price:55, stock:2, threshold:5, barcode:"611234500073"},
@@ -563,7 +600,7 @@ const defaultProducts = [
   {id:"p10", name:"دباسة صغيرة", category:"أدوات مكتبية", icon:"📎", price:22, stock:8, threshold:5, barcode:"611234500103"},
   {id:"p11", name:"أوراق A4 (رزمة 500 ورقة)", category:"قرطاسية", icon:"📄", price:32, stock:17, threshold:10, barcode:"611234500110"},
   {id:"p12", name:"مجلد ملفات بلاستيكي", category:"قرطاسية", icon:"🗂️", price:12, stock:30, threshold:10, barcode:"611234500127"},
-  {id:"p13", name:"رواية ذاكرة الجسد", category:"كتب", icon:"📕", price:60, stock:4, threshold:5, barcode:"611234500134"},
+  {id:"p13", name:"رواية ذاكرة الجسد", category:"كتب", icon:"📕", price:60, stock:4, threshold:5, barcode:"611234500134", schoolType:"غير محدد", level:"غير محدد"},
   {id:"p14", name:"طقم أقلام تخطيط فاخر", category:"أقلام", icon:"🖋️", price:95, stock:1, threshold:3, barcode:"611234500141"},
 ];
 
@@ -725,12 +762,56 @@ function renderCategories(){
     `<div class="cat-chip ${c===activeCategory?'active':''}" onclick="setCategory('${c}')">${c}</div>`
   ).join('');
 }
-function setCategory(c){ activeCategory=c; renderCategories(); renderProducts(); }
+function setCategory(c){
+  activeCategory=c;
+  renderCategories();
+  renderBookFilters();
+  renderProducts();
+}
+
+// شريط فلترة إضافي (نوع المدرسة + المستوى) — كيبان غير كي تكون الفئة المفعّلة هي "كتب"
+function renderBookFilters(){
+  const wrap = document.getElementById('bookFilterRow');
+  if(activeCategory !== 'كتب'){
+    wrap.style.display = 'none';
+    bookSchoolFilter = 'الكل';
+    bookLevelFilter = 'الكل';
+    return;
+  }
+  wrap.style.display = 'flex';
+  const schoolOptions = ["الكل", ...SCHOOL_TYPES.filter(s=>s!=="غير محدد")];
+  const levelOptions = ["الكل", ...SCHOOL_LEVELS.filter(l=>l!=="غير محدد")];
+  wrap.innerHTML = `
+    <select id="bookSchoolFilterSelect" onchange="setBookSchoolFilter(this.value)" style="padding:7px 10px;border-radius:20px;border:1px solid var(--paper-deep);font-family:'Tajawal';font-size:13px;">
+      ${schoolOptions.map(s=>`<option value="${s}" ${s===bookSchoolFilter?'selected':''}>${s==='الكل'?'كل المدارس':s}</option>`).join('')}
+    </select>
+    <select id="bookLevelFilterSelect" onchange="setBookLevelFilter(this.value)" style="padding:7px 10px;border-radius:20px;border:1px solid var(--paper-deep);font-family:'Tajawal';font-size:13px;">
+      ${levelOptions.map(l=>`<option value="${l}" ${l===bookLevelFilter?'selected':''}>${l==='الكل'?'كل المستويات':l}</option>`).join('')}
+    </select>
+  `;
+}
+function setBookSchoolFilter(v){ bookSchoolFilter=v; renderProducts(); }
+function setBookLevelFilter(v){ bookLevelFilter=v; renderProducts(); }
 
 function stockLabel(p){
   if(p.stock<=0) return `<span class="pstock out">الكمية: 0 (نفدت)</span>`;
   if(p.stock<=p.threshold) return `<span class="pstock low">متبقي ${p.stock}</span>`;
   return `<span class="pstock">متوفر (${p.stock})</span>`;
+}
+
+// شارات صغيرة تبان فوق بطاقة الكتاب (نوع المدرسة + المستوى) إلا كانت محددة
+function bookTagsHtml(p){
+  if(p.category !== 'كتب') return '';
+  const hasSchool = p.schoolType && p.schoolType !== 'غير محدد';
+  const hasLevel = p.level && p.level !== 'غير محدد';
+  if(!hasSchool && !hasLevel) return '';
+  let schoolClass = 'school-both';
+  if(p.schoolType==='عمومي') schoolClass='school-public';
+  else if(p.schoolType==='خصوصي') schoolClass='school-private';
+  return `<div class="pbook-tags">
+    ${hasSchool ? `<span class="pbook-tag ${schoolClass}">${p.schoolType}</span>` : ''}
+    ${hasLevel ? `<span class="pbook-tag">${p.level}</span>` : ''}
+  </div>`;
 }
 
 function renderProducts(){
@@ -739,7 +820,16 @@ function renderProducts(){
     const matchCat = activeCategory==="الكل" || p.category===activeCategory;
     const term = searchTerm.toLowerCase();
     const matchSearch = p.name.toLowerCase().includes(term) || (p.barcode||'').includes(term);
-    return matchCat && matchSearch;
+    let matchBookFilters = true;
+    if(activeCategory==='كتب'){
+      if(bookSchoolFilter!=='الكل'){
+        matchBookFilters = matchBookFilters && (p.schoolType===bookSchoolFilter || p.schoolType==='كلاهما');
+      }
+      if(bookLevelFilter!=='الكل'){
+        matchBookFilters = matchBookFilters && (p.level===bookLevelFilter);
+      }
+    }
+    return matchCat && matchSearch && matchBookFilters;
   });
   if(list.length===0){
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--ink-soft);padding:40px;">لا توجد منتوجات</div>`;
@@ -750,6 +840,7 @@ function renderProducts(){
       <span class="picon">${p.icon}</span>
       <span class="pname">${p.name}</span>
       <span class="pprice nums">${p.price} د.م</span>
+      ${bookTagsHtml(p)}
       ${p.barcode ? `<span class="pbarcode nums">${p.barcode}</span>` : ''}
       ${stockLabel(p)}
     </button>
@@ -1159,6 +1250,69 @@ function renderArchiveSection(){
   `).join('');
 }
 
+// كيبني جدول المنتوجات مقسم حسب الفئة (كل فئة بمجموعة بحالها برأسها)،
+// وكل فئة كتبان منها غير أول 10 منتوجات مع زر "عرض المزيد" إلا كان فيها كثر
+function renderProductsTableGrouped(list, adminSearchTerm){
+  if(list.length===0){
+    return `<thead><tr><th>المنتوج</th><th>الباركود</th><th>الفئة</th><th>نوع المدرسة</th><th>المستوى</th><th>السعر</th><th>المخزون</th><th></th></tr></thead>
+      <tbody><tr><td colspan="8" style="text-align:center;padding:18px;color:var(--ink-soft);">
+        لا يوجد منتوج بهذا الباركود أو الاسم
+        ${adminSearchTerm ? `<div style="margin-top:10px;"><button class="btn btn-gold" onclick="openProductForm(); document.getElementById('pfBarcode').value=document.getElementById('adminProductSearch').value.trim();">+ إضافة منتوج بهذا الباركود</button></div>` : ''}
+      </td></tr></tbody>`;
+  }
+
+  // كل الفئات الموجودة فعلا فاللائحة، بترتيب PRODUCT_CATEGORY_ORDER أولا، وأي فئة زائدة فالآخر
+  const presentCats = [...new Set(list.map(p=>p.category))];
+  const orderedCats = [
+    ...PRODUCT_CATEGORY_ORDER.filter(c=>presentCats.includes(c)),
+    ...presentCats.filter(c=>!PRODUCT_CATEGORY_ORDER.includes(c))
+  ];
+
+  const rowsHtml = orderedCats.map(cat=>{
+    const catProducts = list.filter(p=>p.category===cat);
+    const limit = adminCatLimit[cat] || ADMIN_PRODUCTS_PAGE_SIZE;
+    const shown = catProducts.slice(0, limit);
+    const remaining = catProducts.length - shown.length;
+
+    const headerRow = `<tr>
+      <td colspan="8" style="background:var(--paper-deep);font-weight:900;font-size:14px;">
+        ${cat} <span class="nums" style="font-weight:400;color:var(--ink-soft);font-size:12.5px;">(${catProducts.length})</span>
+      </td>
+    </tr>`;
+
+    const productRows = shown.map(p=>`
+      <tr>
+        <td>${p.icon} ${p.name}</td>
+        <td class="nums">${p.barcode||'—'}</td>
+        <td>${p.category}</td>
+        <td>${p.category==='كتب' ? (p.schoolType && p.schoolType!=='غير محدد' ? p.schoolType : '—') : '—'}</td>
+        <td>${p.category==='كتب' ? (p.level && p.level!=='غير محدد' ? p.level : '—') : '—'}</td>
+        <td class="nums">${p.price} د.م</td>
+        <td class="nums">${p.stock}</td>
+        <td style="display:flex;gap:8px;">
+          <button class="btn btn-outline" style="padding:6px 10px;" onclick="openProductForm('${p.id}')">تعديل</button>
+          <button class="icon-del" onclick="deleteProduct('${p.id}')">🗑️</button>
+        </td>
+      </tr>`).join('');
+
+    const moreRow = remaining>0 ? `
+      <tr>
+        <td colspan="8" style="text-align:center;padding:10px;">
+          <button class="btn btn-outline" onclick="showMoreProductsCat('${cat}')">عرض المزيد (${remaining} متبقي فـ${cat})</button>
+        </td>
+      </tr>` : '';
+
+    return headerRow + productRows + moreRow;
+  }).join('');
+
+  return `<thead><tr><th>المنتوج</th><th>الباركود</th><th>الفئة</th><th>نوع المدرسة</th><th>المستوى</th><th>السعر</th><th>المخزون</th><th></th></tr></thead>
+    <tbody>${rowsHtml}</tbody>`;
+}
+function showMoreProductsCat(cat){
+  adminCatLimit[cat] = (adminCatLimit[cat] || ADMIN_PRODUCTS_PAGE_SIZE) + ADMIN_PRODUCTS_PAGE_SIZE;
+  renderAdmin();
+}
+
 function renderAdmin(){
   const lowStock = products.filter(p=>p.stock<=p.threshold);
   const totalRevenue = sales.reduce((s,x)=>s+x.total,0);
@@ -1219,25 +1373,7 @@ function renderAdmin(){
     p.name.toLowerCase().includes(adminSearchTerm) || (p.barcode||'').toLowerCase().includes(adminSearchTerm)
   ) : products;
 
-  document.getElementById('productsTable').innerHTML = `
-    <thead><tr><th>المنتوج</th><th>الباركود</th><th>الفئة</th><th>السعر</th><th>المخزون</th><th></th></tr></thead>
-    <tbody>${filteredProducts.length===0 ? `
-      <tr><td colspan="6" style="text-align:center;padding:18px;color:var(--ink-soft);">
-        لا يوجد منتوج بهذا الباركود أو الاسم
-        ${adminSearchTerm ? `<div style="margin-top:10px;"><button class="btn btn-gold" onclick="openProductForm(); document.getElementById('pfBarcode').value=document.getElementById('adminProductSearch').value.trim();">+ إضافة منتوج بهذا الباركود</button></div>` : ''}
-      </td></tr>` : filteredProducts.map(p=>`
-      <tr>
-        <td>${p.icon} ${p.name}</td>
-        <td class="nums">${p.barcode||'—'}</td>
-        <td>${p.category}</td>
-        <td class="nums">${p.price} د.م</td>
-        <td class="nums">${p.stock}</td>
-        <td style="display:flex;gap:8px;">
-          <button class="btn btn-outline" style="padding:6px 10px;" onclick="openProductForm('${p.id}')">تعديل</button>
-          <button class="icon-del" onclick="deleteProduct('${p.id}')">🗑️</button>
-        </td>
-      </tr>`).join('')}
-    </tbody>`;
+  document.getElementById('productsTable').innerHTML = renderProductsTableGrouped(filteredProducts, adminSearchTerm);
 
   // Sales grouped by cashier
   const byUser = {};
@@ -1407,6 +1543,22 @@ function generateBarcode(){
   document.getElementById('pfBarcode').value = code;
 }
 
+// خانتا "نوع المدرسة" و"المستوى الدراسي" كتبانو غير كي تكون الفئة المختارة هي "كتب"
+function toggleBookFields(){
+  const cat = document.getElementById('pfCategory').value;
+  const wrap = document.getElementById('bookFieldsWrap');
+  wrap.style.display = (cat === 'كتب') ? 'grid' : 'none';
+}
+
+function fillSchoolTypeSelect(selected){
+  const sel = document.getElementById('pfSchoolType');
+  sel.innerHTML = SCHOOL_TYPES.map(s=>`<option value="${s}" ${s===selected?'selected':''}>${s}</option>`).join('');
+}
+function fillLevelSelect(selected){
+  const sel = document.getElementById('pfLevel');
+  sel.innerHTML = SCHOOL_LEVELS.map(l=>`<option value="${l}" ${l===selected?'selected':''}>${l}</option>`).join('');
+}
+
 function openProductForm(id){
   document.getElementById('productFormOverlay').classList.add('show');
   if(id){
@@ -1420,6 +1572,8 @@ function openProductForm(id){
     document.getElementById('pfPrice').value=p.price;
     document.getElementById('pfStock').value=p.stock;
     document.getElementById('pfThreshold').value=p.threshold;
+    fillSchoolTypeSelect(p.schoolType||'غير محدد');
+    fillLevelSelect(p.level||'غير محدد');
   }else{
     document.getElementById('productFormTitle').textContent='إضافة منتوج';
     document.getElementById('pfId').value='';
@@ -1430,7 +1584,10 @@ function openProductForm(id){
     document.getElementById('pfPrice').value='';
     document.getElementById('pfStock').value='';
     document.getElementById('pfThreshold').value=5;
+    fillSchoolTypeSelect('غير محدد');
+    fillLevelSelect('غير محدد');
   }
+  toggleBookFields();
 }
 function toggleProductForm(show){ document.getElementById('productFormOverlay').classList.toggle('show', show); }
 
@@ -1443,6 +1600,8 @@ async function saveProduct(){
   const price = parseFloat(document.getElementById('pfPrice').value);
   const stock = parseInt(document.getElementById('pfStock').value);
   const threshold = parseInt(document.getElementById('pfThreshold').value);
+  const schoolType = category==='كتب' ? document.getElementById('pfSchoolType').value : 'غير محدد';
+  const level = category==='كتب' ? document.getElementById('pfLevel').value : 'غير محدد';
   if(!name||isNaN(price)||isNaN(stock)||isNaN(threshold)){ showToast('عمر جميع الحقول بشكل صحيح'); return; }
   if(barcode && products.some(p=>p.barcode===barcode && p.id!==id)){
     showToast('هذا الباركود مستعمل من طرف منتوج آخر');
@@ -1451,13 +1610,13 @@ async function saveProduct(){
   if(id){
     const p = products.find(x=>x.id===id);
     const oldStock = p.stock;
-    Object.assign(p,{name,category,icon,barcode,price,stock,threshold});
+    Object.assign(p,{name,category,icon,barcode,price,stock,threshold,schoolType,level});
     if(stock !== oldStock){
       const diff = stock - oldStock;
       addMovement('تعديل المخزون', `"${name}": تغيرت الكمية من ${oldStock} إلى ${stock} (${diff>0?'+':''}${diff})`);
     }
   }else{
-    products.push({id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold});
+    products.push({id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold,schoolType,level});
     addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
   }
   await persistProducts();
@@ -1475,8 +1634,11 @@ async function deleteProduct(id){
   showToast('تم حذف المنتوج');
 }
 
+// النقر خارج نافذة "إضافة/تعديل منتوج" أو "إضافة/تعديل مستخدم" ما كيسدهاش،
+// باش ما تضيعش المعلومات لي دخلتيها بالغلط بضغطة برا. التسدّ غير بزر ✕ أو بعد الحفظ.
+const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay'];
 document.querySelectorAll('.overlay').forEach(ov=>{
-  ov.addEventListener('click', e=>{ if(e.target===ov && ov.id!=='receiptOverlay') ov.classList.remove('show'); });
+  ov.addEventListener('click', e=>{ if(e.target===ov && !OVERLAYS_NO_OUTSIDE_CLOSE.includes(ov.id)) ov.classList.remove('show'); });
 });
 
 if(window.__fb){ loadData(); } else { window.addEventListener('fb-ready', loadData); }
