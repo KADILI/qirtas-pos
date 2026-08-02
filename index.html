@@ -551,7 +551,7 @@
 <script>
 const CATEGORIES = ["الكل","كتب","أقلام","أدوات مكتبية","قرطاسية"];
 
-// خانات خاصة بفئة "كتب" فقط: نوع المدرسة والمستوى الدراسي حتى الباكلوريا
+// خانات خاصة بفئتي "كتب" و"قرطاسية": نوع المدرسة والمستوى الدراسي حتى الباكلوريا
 const SCHOOL_TYPES = ["غير محدد","عمومي","خصوصي","كلاهما"];
 const SCHOOL_LEVELS = [
   "غير محدد",
@@ -582,6 +582,9 @@ let adminSubView = 'reports'; // 'reports' | 'stock' — controls which admin su
 const PRODUCT_CATEGORY_ORDER = ["كتب","أقلام","أدوات مكتبية","قرطاسية"];
 const ADMIN_PRODUCTS_PAGE_SIZE = 10; // عدد المنتوجات المعروضة فكل فئة قبل الضغط على "عرض المزيد"
 let adminCatLimit = {}; // {categoryName: عدد المنتوجات المعروضة حاليا فهاذ الفئة}
+
+// الفئات لي فيهم خانتا "نوع المدرسة" و"المستوى الدراسي": الكتب والقرطاسية
+function isSchoolCategory(cat){ return cat === 'كتب' || cat === 'قرطاسية'; }
 
 const defaultUsers = [
   {id:"u1", name:"عبد لطيف (المدير)", username:"admin", password:"Younes@2005", role:"admin"}
@@ -769,10 +772,10 @@ function setCategory(c){
   renderProducts();
 }
 
-// شريط فلترة إضافي (نوع المدرسة + المستوى) — كيبان غير كي تكون الفئة المفعّلة هي "كتب"
+// شريط فلترة إضافي (نوع المدرسة + المستوى) — كيبان غير كي تكون الفئة المفعّلة هي "كتب" أو "قرطاسية"
 function renderBookFilters(){
   const wrap = document.getElementById('bookFilterRow');
-  if(activeCategory !== 'كتب'){
+  if(!isSchoolCategory(activeCategory)){
     wrap.style.display = 'none';
     bookSchoolFilter = 'الكل';
     bookLevelFilter = 'الكل';
@@ -799,9 +802,9 @@ function stockLabel(p){
   return `<span class="pstock">متوفر (${p.stock})</span>`;
 }
 
-// شارات صغيرة تبان فوق بطاقة الكتاب (نوع المدرسة + المستوى) إلا كانت محددة
+// شارات صغيرة تبان فوق بطاقة المنتوج (نوع المدرسة + المستوى) إلا كانت محددة — للكتب والقرطاسية
 function bookTagsHtml(p){
-  if(p.category !== 'كتب') return '';
+  if(!isSchoolCategory(p.category)) return '';
   const hasSchool = p.schoolType && p.schoolType !== 'غير محدد';
   const hasLevel = p.level && p.level !== 'غير محدد';
   if(!hasSchool && !hasLevel) return '';
@@ -821,7 +824,7 @@ function renderProducts(){
     const term = searchTerm.toLowerCase();
     const matchSearch = p.name.toLowerCase().includes(term) || (p.barcode||'').includes(term);
     let matchBookFilters = true;
-    if(activeCategory==='كتب'){
+    if(isSchoolCategory(activeCategory)){
       if(bookSchoolFilter!=='الكل'){
         matchBookFilters = matchBookFilters && (p.schoolType===bookSchoolFilter || p.schoolType==='كلاهما');
       }
@@ -1285,8 +1288,8 @@ function renderProductsTableGrouped(list, adminSearchTerm){
         <td>${p.icon} ${p.name}</td>
         <td class="nums">${p.barcode||'—'}</td>
         <td>${p.category}</td>
-        <td>${p.category==='كتب' ? (p.schoolType && p.schoolType!=='غير محدد' ? p.schoolType : '—') : '—'}</td>
-        <td>${p.category==='كتب' ? (p.level && p.level!=='غير محدد' ? p.level : '—') : '—'}</td>
+        <td>${isSchoolCategory(p.category) ? (p.schoolType && p.schoolType!=='غير محدد' ? p.schoolType : '—') : '—'}</td>
+        <td>${isSchoolCategory(p.category) ? (p.level && p.level!=='غير محدد' ? p.level : '—') : '—'}</td>
         <td class="nums">${p.price} د.م</td>
         <td class="nums">${p.stock}</td>
         <td style="display:flex;gap:8px;">
@@ -1543,11 +1546,11 @@ function generateBarcode(){
   document.getElementById('pfBarcode').value = code;
 }
 
-// خانتا "نوع المدرسة" و"المستوى الدراسي" كتبانو غير كي تكون الفئة المختارة هي "كتب"
+// خانتا "نوع المدرسة" و"المستوى الدراسي" كتبانو غير كي تكون الفئة المختارة هي "كتب" أو "قرطاسية"
 function toggleBookFields(){
   const cat = document.getElementById('pfCategory').value;
   const wrap = document.getElementById('bookFieldsWrap');
-  wrap.style.display = (cat === 'كتب') ? 'grid' : 'none';
+  wrap.style.display = isSchoolCategory(cat) ? 'grid' : 'none';
 }
 
 function fillSchoolTypeSelect(selected){
@@ -1600,8 +1603,8 @@ async function saveProduct(){
   const price = parseFloat(document.getElementById('pfPrice').value);
   const stock = parseInt(document.getElementById('pfStock').value);
   const threshold = parseInt(document.getElementById('pfThreshold').value);
-  const schoolType = category==='كتب' ? document.getElementById('pfSchoolType').value : 'غير محدد';
-  const level = category==='كتب' ? document.getElementById('pfLevel').value : 'غير محدد';
+  const schoolType = isSchoolCategory(category) ? document.getElementById('pfSchoolType').value : 'غير محدد';
+  const level = isSchoolCategory(category) ? document.getElementById('pfLevel').value : 'غير محدد';
   if(!name||isNaN(price)||isNaN(stock)||isNaN(threshold)){ showToast('عمر جميع الحقول بشكل صحيح'); return; }
   if(barcode && products.some(p=>p.barcode===barcode && p.id!==id)){
     showToast('هذا الباركود مستعمل من طرف منتوج آخر');
