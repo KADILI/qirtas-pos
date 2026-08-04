@@ -193,6 +193,17 @@
   .inv-footer{ margin-top:30px; text-align:center; font-size:12.5px; color:var(--ink-soft); border-top:1px dashed var(--paper-deep); padding-top:14px; }
   .inv-note{ margin-top:16px; padding:10px 14px; background:#FBEBD3; border:1px solid #E7C57A; border-radius:8px; font-size:12.5px; color:#8A5A16; }
 
+  /* ===== Thermal 80mm receipt layout — used when printing on an 80mm thermal printer ===== */
+  .invoice-thermal{ width:76mm; margin:0 auto; background:#fff; font-family:'IBM Plex Sans Arabic', monospace; font-size:11.5px; color:#000; padding:2mm 1mm; }
+  .invoice-thermal h3{ text-align:center; margin:0 0 2px; font-size:16px; }
+  .invoice-thermal .th-sub{ text-align:center; font-size:10.5px; color:#333; }
+  .invoice-thermal hr{ border:none; border-top:1px dashed #000; margin:6px 0; }
+  .invoice-thermal .th-row{ display:flex; justify-content:space-between; gap:6px; font-size:11px; margin-bottom:2px; }
+  .invoice-thermal .th-item-name{ font-weight:700; margin-top:4px; }
+  .invoice-thermal .th-total{ font-weight:900; font-size:14px; display:flex; justify-content:space-between; margin-top:6px; }
+  .invoice-thermal .th-footer{ text-align:center; font-size:10.5px; margin-top:10px; }
+  .invoice-thermal .th-note{ text-align:center; font-size:10px; margin-top:6px; color:#333; }
+
   /* ===== Admin / Reports view ===== */
   .admin-scroll{ flex:1; overflow-y:auto; padding:20px 24px; }
   .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:20px; }
@@ -262,9 +273,19 @@
 
   @media print{
     @page{ size:A4; margin:14mm; }
+    .app{ display:none !important; }
     body *{ visibility:hidden; }
     #printArea, #printArea *{ visibility:visible; }
+    /* the modal/overlay wrappers around #printArea used to clip long invoices
+       (max-height + overflow-y:auto on .modal-box) — neutralize that for print
+       so multi-page invoices come out complete instead of being cut off */
+    .overlay{ position:static !important; overflow:visible !important; inset:auto !important; }
+    .modal-box{ max-height:none !important; overflow:visible !important; }
     #printArea{ position:absolute; top:0; right:0; left:0; width:100%; }
+    #invoiceThermal{ display:none; }
+    .inv-table{ page-break-inside:auto; }
+    .inv-table thead{ display:table-header-group; }
+    .inv-table tr{ page-break-inside:avoid; page-break-after:auto; }
   }
   @media (max-width: 860px){
     .order-side{ width:320px; flex-basis:320px; }
@@ -391,7 +412,7 @@
           <div class="section-head">
             <h3 style="margin:0;">🧾 سجل الفواتير (كل فاتورة بمفردها)</h3>
           </div>
-          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">هنا كتلقى كل فاتورة ديرت من أي وقت، وحدة وحدة برقمها، سواء كانت فـ"سجل المبيعات" الحالي أو تصفرات من قبل ودخلات للأرشيف. أي فاتورة تقدر تعاود تشوفها وتطبعها فأي وقت.</p>
+          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">هنا كتلقى كل فاتورة ديرت من أي وقت، وحدة وحدة برقمها، سواء كانت فـ"سجل المبيعات" الحالي أو تصفرات من قبل ودخلات للأرشيف. أي فاتورة تقدر تعاود تشوفها وتطبعها أو تعدلها أو تحذفها فأي وقت.</p>
           <div class="search-row" style="margin-bottom:10px;">
             <input type="text" id="invoiceSearch" placeholder="🔍 ابحث برقم الفاتورة أو اسم الكاشير..." oninput="renderInvoicesTable()">
           </div>
@@ -506,6 +527,25 @@
   </div>
 </div>
 
+<!-- Invoice Edit Modal -->
+<div class="overlay" id="invoiceEditOverlay">
+  <div class="modal-box" style="width:min(560px,94vw);">
+    <div class="drawer-head">
+      <h2 style="margin:0;">تعديل الفاتورة <span id="ieInvoiceId" class="nums"></span></h2>
+      <button class="close-x" onclick="closeInvoiceEdit()">✕</button>
+    </div>
+    <div id="ieItemsList"></div>
+    <div class="overall-discount-row" style="margin-top:10px;">
+      <label for="ieOverallDiscount">نسبة تخفيض على المجموع</label>
+      <input type="number" id="ieOverallDiscount" class="nums" min="0" max="100" value="0" oninput="renderInvoiceEditTotals()">
+    </div>
+    <div class="sum-row"><span>المجموع الفرعي</span><span class="nums" id="ieSubtotal">0 د.م</span></div>
+    <div class="sum-row total"><span>المجموع النهائي</span><span class="nums" id="ieTotal">0 د.م</span></div>
+    <button class="btn btn-primary" onclick="saveInvoiceEdit()">حفظ التعديلات</button>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">ملاحظة: تعديل الكمية غادي يأثر على المخزون تلقائيا (زيادة الكمية كتنقص من المخزون، ونقصانها أو حذف المنتوج كيرجع الكمية للمخزون).</p>
+  </div>
+</div>
+
 <!-- Receipt Modal -->
 <div class="overlay" id="receiptOverlay">
   <div class="modal-box">
@@ -514,9 +554,10 @@
       <button class="close-x" onclick="closeReceipt()">✕</button>
     </div>
     <div class="receipt" id="printArea"></div>
-    <div style="display:flex; gap:10px; margin-top:14px;">
-      <button class="btn btn-outline" style="flex:1;" onclick="window.print()">🖨️ طباعة (ورق A4)</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="closeReceipt()" id="receiptCloseBtn">بيع جديد</button>
+    <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+      <button class="btn btn-outline" style="flex:1;min-width:140px;" onclick="printReceipt('a4')">🖨️ طباعة A4</button>
+      <button class="btn btn-outline" style="flex:1;min-width:140px;" onclick="printReceipt('thermal')">🧾 طباعة حرارية 80mm</button>
+      <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="closeReceipt()" id="receiptCloseBtn">بيع جديد</button>
     </div>
   </div>
 </div>
@@ -1006,7 +1047,7 @@ function generateQuote(){
   const items = ids.map(id=>{
     const p = products.find(x=>x.id===id);
     const discount = orderDiscount[id]||0;
-    return {name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal:lineSubtotal(id)};
+    return {id:p.id, name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal:lineSubtotal(id)};
   });
   const quote = {
     items, subtotal, overallDiscountPercent, total,
@@ -1021,7 +1062,7 @@ function showQuote(quote){
   document.getElementById('receiptModalTitle').textContent = '📋 تسعيرة (بدون بيع)';
   document.getElementById('receiptCloseBtn').textContent = 'إغلاق';
   document.getElementById('printArea').innerHTML = `
-    <div class="invoice-a4">
+    <div class="invoice-a4" id="invoiceA4">
       <div class="inv-header">
         <div class="inv-logo">📚 مكتبة منار<span class="sub-logo">قرطاسية وكتب</span></div>
         <div class="inv-title">
@@ -1053,7 +1094,16 @@ function showQuote(quote){
       <div class="inv-note">⚠️ هذه تسعيرة تقديرية فقط وليست فاتورة بيع، والأسعار قابلة للتغيير</div>
       <div class="inv-footer">مكتبة منار — شكرا لثقتكم 🌿</div>
     </div>
-  `;
+  ` + buildThermalHtml({
+    title: 'تسعيرة تقديرية',
+    metaLines: [`التاريخ: ${quote.date}`],
+    items: quote.items,
+    subtotal: quote.subtotal,
+    overallDiscountPercent: quote.overallDiscountPercent,
+    total: quote.total,
+    noteText: '⚠️ تسعيرة تقديرية فقط، وليست فاتورة بيع',
+    footer: 'مكتبة منار — شكرا لثقتكم 🌿'
+  });
   document.getElementById('receiptOverlay').classList.add('show');
 }
 
@@ -1068,7 +1118,7 @@ async function finishSale(){
     const discount = orderDiscount[id]||0;
     const lineTotal = lineSubtotal(id);
     p.stock -= order[id];
-    return {name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal};
+    return {id:p.id, name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal};
   });
   const sale = {
     id: 's'+Date.now(),
@@ -1103,7 +1153,7 @@ function showReceipt(sale, isReprint){
   const subtotal = sale.subtotal!=null ? sale.subtotal : sale.total;
   const overallDisc = sale.overallDiscountPercent || 0;
   document.getElementById('printArea').innerHTML = `
-    <div class="invoice-a4">
+    <div class="invoice-a4" id="invoiceA4">
       <div class="inv-header">
         <div class="inv-logo">📚 مكتبة منار<span class="sub-logo">قرطاسية وكتب</span></div>
         <div class="inv-title">
@@ -1136,22 +1186,91 @@ function showReceipt(sale, isReprint){
       </div>
       <div class="inv-footer">مكتبة منار — شكرا لزيارتكم 🌿</div>
     </div>
-  `;
+  ` + buildThermalHtml({
+    title: 'فاتورة بيع',
+    metaLines: [`رقم البيع: ${sale.id}`, `التاريخ: ${sale.date}`, `الكاشير: ${sale.cashierName||'—'}`],
+    items: sale.items,
+    subtotal: subtotal,
+    overallDiscountPercent: overallDisc,
+    total: sale.total,
+    footer: 'مكتبة منار — شكرا لزيارتكم 🌿'
+  });
   document.getElementById('receiptOverlay').classList.add('show');
 }
 function closeReceipt(){ document.getElementById('receiptOverlay').classList.remove('show'); }
 
+// builds the narrow 80mm thermal-printer version of an invoice/quote, kept hidden
+// (display:none) inside #printArea alongside the A4 version; printReceipt() decides
+// which one becomes visible right before calling window.print()
+function buildThermalHtml(opts){
+  const {title, metaLines, items, subtotal, overallDiscountPercent, total, footer, noteText} = opts;
+  const disc = overallDiscountPercent || 0;
+  return `
+    <div class="invoice-thermal" id="invoiceThermal" style="display:none;">
+      <h3>📚 مكتبة منار</h3>
+      <div class="th-sub">قرطاسية وكتب</div>
+      <hr>
+      <div class="th-sub" style="font-weight:700;">${title}</div>
+      ${metaLines.map(m=>`<div class="th-sub">${m}</div>`).join('')}
+      <hr>
+      ${items.map(i=>`
+        <div class="th-item-name">${i.icon||''} ${i.name}</div>
+        <div class="th-row"><span>${i.qty} × ${i.price} د.م ${i.discount>0?`(خصم ${i.discount}%)`:''}</span><span class="nums">${(+i.lineTotal).toFixed(2)}</span></div>
+      `).join('')}
+      <hr>
+      <div class="th-row"><span>المجموع الفرعي</span><span class="nums">${(+subtotal).toFixed(2)} د.م</span></div>
+      ${disc>0 ? `<div class="th-row"><span>خصم (${disc}%)</span><span class="nums">- ${(subtotal-total).toFixed(2)} د.م</span></div>` : ''}
+      <div class="th-total"><span>المجموع</span><span class="nums">${(+total).toFixed(2)} د.م</span></div>
+      ${noteText ? `<div class="th-note">${noteText}</div>` : ''}
+      <div class="th-footer">${footer}</div>
+    </div>
+  `;
+}
+
+// prints the currently-open receipt/quote/invoice in one of two paper formats.
+// A dynamic <style> tag is injected right before printing to pick the correct
+// @page size (A4 vs 80mm thermal roll) and to show/hide the matching template —
+// this also carries the fix for invoices being cut off when printed, since it
+// forces the modal wrapper to stop clipping overflow during print (see the
+// base @media print rules above).
+function printReceipt(mode){
+  const old = document.getElementById('dynamicPrintStyle');
+  if(old) old.remove();
+  const style = document.createElement('style');
+  style.id = 'dynamicPrintStyle';
+  style.textContent = mode === 'thermal' ? `
+    @media print{
+      @page{ size:80mm auto; margin:2mm; }
+      #invoiceA4{ display:none !important; }
+      #invoiceThermal{ display:block !important; width:100% !important; margin:0 !important; }
+    }
+  ` : `
+    @media print{
+      @page{ size:A4; margin:14mm; }
+      #invoiceThermal{ display:none !important; }
+      #invoiceA4{ display:block !important; }
+    }
+  `;
+  document.head.appendChild(style);
+  setTimeout(()=>window.print(), 50);
+}
+
 // looks up a sale by id in both the live sales log AND every archived batch
 // (a sale never truly disappears: it's either in `sales` or tucked inside `archivedSales`),
-// so any invoice can always be re-opened and re-printed from here
-function findSaleById(id){
-  let found = sales.find(s=>s.id===id);
-  if(found) return found;
+// so any invoice can always be re-opened, re-printed, edited, or deleted from here.
+// returns {sale, type:'live'|'archive', index, batch?} or null
+function locateSale(id){
+  let idx = sales.findIndex(s=>s.id===id);
+  if(idx>-1) return {sale: sales[idx], type:'live', index: idx};
   for(const batch of archivedSales){
-    found = batch.items.find(s=>s.id===id);
-    if(found) return found;
+    const idx2 = batch.items.findIndex(s=>s.id===id);
+    if(idx2>-1) return {sale: batch.items[idx2], type:'archive', index: idx2, batch};
   }
   return null;
+}
+function findSaleById(id){
+  const loc = locateSale(id);
+  return loc ? loc.sale : null;
 }
 // every invoice ever made, each kept as its own individual record — whether it's
 // still in the live "سجل المبيعات" or was moved into an archive batch by "تصفير الحسابات".
@@ -1176,7 +1295,11 @@ function renderInvoicesTable(){
           <td>${s.cashierName||'—'}</td>
           <td class="nums">${(+s.total).toFixed(2)} د.م</td>
           <td>${s.date}</td>
-          <td><button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="viewInvoice('${s.id}')">🧾 عرض</button></td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="viewInvoice('${s.id}')">🧾 عرض</button>
+            <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="openInvoiceEdit('${s.id}')">✏️ تعديل</button>
+            <button class="icon-del" onclick="deleteInvoice('${s.id}')">🗑️</button>
+          </td>
         </tr>`).join('')}
     </tbody>`;
 }
@@ -1184,6 +1307,180 @@ function viewInvoice(id){
   const sale = findSaleById(id);
   if(!sale){ showToast('ماكايناش هاذ الفاتورة'); return; }
   showReceipt(sale, true);
+}
+
+/* ===== Delete / edit invoices ===== */
+
+// deletes an invoice permanently (from the live sales log or from an archive batch)
+// and restores its items' quantities back into stock, since the sale is being undone
+async function deleteInvoice(id){
+  const loc = locateSale(id);
+  if(!loc){ showToast('ماكايناش هاذ الفاتورة'); return; }
+  const sale = loc.sale;
+  const ok = confirm(`واش متأكد من حذف الفاتورة رقم ${sale.id} بقيمة ${(+sale.total).toFixed(2)} د.م؟\nغادي ترجع كميات المنتوجات لي كانت فيها للمخزون، وهاذ العملية ماغاتقدرش ترجع لور.`);
+  if(!ok) return;
+
+  const restored = [];
+  sale.items.forEach(it=>{
+    const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
+    if(p){ p.stock += it.qty; restored.push(`${p.name} +${it.qty}`); }
+  });
+
+  if(loc.type==='live'){
+    sales.splice(loc.index,1);
+  }else{
+    loc.batch.items.splice(loc.index,1);
+    loc.batch.count = loc.batch.items.length;
+    loc.batch.total = loc.batch.items.reduce((s,x)=>s+x.total,0);
+    if(loc.batch.items.length===0){
+      archivedSales = archivedSales.filter(b=>b.id!==loc.batch.id);
+    }
+  }
+
+  addMovement('حذف فاتورة', `تم حذف الفاتورة رقم ${sale.id} بقيمة ${(+sale.total).toFixed(2)} د.م${restored.length?' وتمت إعادة الكميات للمخزون: '+restored.join('، '):''}`);
+
+  await persistProducts();
+  await persistArchive();
+  renderAdmin();
+  renderProducts();
+  showToast('تم حذف الفاتورة');
+}
+
+// ===== Invoice edit modal state =====
+let editingInvoiceId = null;
+let editingItems = [];
+let editingOverallDiscount = 0;
+
+function ieLineTotal(it){ return it.price*it.qty*(1-(it.discount||0)/100); }
+function ieSubtotalCalc(){ return editingItems.reduce((s,it)=>s+ieLineTotal(it),0); }
+
+function openInvoiceEdit(id){
+  const loc = locateSale(id);
+  if(!loc){ showToast('ماكايناش هاذ الفاتورة'); return; }
+  editingInvoiceId = id;
+  editingItems = loc.sale.items.map(it=>({...it}));
+  editingOverallDiscount = loc.sale.overallDiscountPercent || 0;
+  document.getElementById('ieInvoiceId').textContent = '#'+id;
+  document.getElementById('ieOverallDiscount').value = editingOverallDiscount;
+  renderInvoiceEditItems();
+  document.getElementById('invoiceEditOverlay').classList.add('show');
+}
+function closeInvoiceEdit(){
+  document.getElementById('invoiceEditOverlay').classList.remove('show');
+  editingInvoiceId = null;
+  editingItems = [];
+}
+function renderInvoiceEditItems(){
+  const wrap = document.getElementById('ieItemsList');
+  if(editingItems.length===0){
+    wrap.innerHTML = `<div class="order-empty"><span class="mark">🧾</span>لا بقاو منتوجات فهاذ الفاتورة — يمكنك حذف الفاتورة كاملة بدل حفظها فارغة</div>`;
+  }else{
+    wrap.innerHTML = editingItems.map((it,idx)=>`
+      <div class="order-line">
+        <div class="icon-circle">${it.icon||'📦'}</div>
+        <div style="flex:1;">
+          <div class="oname">${it.name}</div>
+          <div class="oprice nums">${it.price} د.م</div>
+          <div class="line-discount-row">
+            <span class="ld-label">خصم على المنتوج</span>
+            <input type="number" class="line-discount-input nums" min="0" max="100" value="${it.discount||0}" onchange="updateEditItemDiscount(${idx}, this.value)">
+            <span class="ld-label">%</span>
+          </div>
+        </div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="updateEditItemQty(${idx},-1)">−</button>
+          <span class="nums">${it.qty}</span>
+          <button class="qty-btn" onclick="updateEditItemQty(${idx},1)">+</button>
+        </div>
+        <div class="line-total nums">${ieLineTotal(it).toFixed(2)}</div>
+        <button class="remove-x" onclick="removeEditItem(${idx})">✕</button>
+      </div>
+    `).join('');
+  }
+  renderInvoiceEditTotals();
+}
+function updateEditItemQty(idx, delta){
+  const it = editingItems[idx];
+  if(!it) return;
+  const newQty = it.qty + delta;
+  if(newQty<=0){
+    if(!confirm(`تنقيص الكمية لـ"${it.name}" لـ0 غادي يحذفه من الفاتورة، متأكد؟`)) return;
+    editingItems.splice(idx,1);
+  }else{
+    if(delta>0){
+      const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
+      if(p && p.stock<=0){ showToast('لا يوجد مخزون كافي لزيادة الكمية'); return; }
+    }
+    it.qty = newQty;
+  }
+  renderInvoiceEditItems();
+}
+function updateEditItemDiscount(idx, val){
+  const it = editingItems[idx];
+  if(!it) return;
+  it.discount = clampPercent(val);
+  renderInvoiceEditItems();
+}
+function removeEditItem(idx){
+  if(!confirm('واش متأكد من حذف هذا المنتوج من الفاتورة؟')) return;
+  editingItems.splice(idx,1);
+  renderInvoiceEditItems();
+}
+function renderInvoiceEditTotals(){
+  editingOverallDiscount = clampPercent(document.getElementById('ieOverallDiscount').value);
+  const subtotal = ieSubtotalCalc();
+  const total = subtotal*(1-editingOverallDiscount/100);
+  document.getElementById('ieSubtotal').textContent = subtotal.toFixed(2)+' د.م';
+  document.getElementById('ieTotal').textContent = total.toFixed(2)+' د.م';
+}
+
+// saves edits to an existing invoice: recomputes totals, adjusts product stock by
+// the DIFFERENCE between old and new quantities (works whether the invoice is
+// still live or already archived), and logs the change in سجل الحركة
+async function saveInvoiceEdit(){
+  const loc = locateSale(editingInvoiceId);
+  if(!loc){ showToast('تعذر إيجاد الفاتورة'); closeInvoiceEdit(); return; }
+  if(editingItems.length===0){ showToast('ما يمكنش تحفظ فاتورة فارغة — احذفها بدل ذلك'); return; }
+
+  const keyOf = it => it.id || it.name;
+  const oldQtyMap = {};
+  loc.sale.items.forEach(it=>{ oldQtyMap[keyOf(it)] = (oldQtyMap[keyOf(it)]||0) + it.qty; });
+  const newQtyMap = {};
+  editingItems.forEach(it=>{ newQtyMap[keyOf(it)] = (newQtyMap[keyOf(it)]||0) + it.qty; });
+  const allKeys = new Set([...Object.keys(oldQtyMap), ...Object.keys(newQtyMap)]);
+  const stockChanges = [];
+  allKeys.forEach(key=>{
+    const diff = (newQtyMap[key]||0) - (oldQtyMap[key]||0); // >0 means more stock must be taken out
+    if(diff !== 0){
+      const p = products.find(x=>x.id===key || x.name===key);
+      if(p){
+        p.stock -= diff;
+        stockChanges.push(`${p.name}: ${diff>0?'-':'+'}${Math.abs(diff)}`);
+      }
+    }
+  });
+
+  const subtotal = ieSubtotalCalc();
+  const total = subtotal*(1-editingOverallDiscount/100);
+  const oldTotal = loc.sale.total;
+
+  loc.sale.items = editingItems.map(it=>({...it, lineTotal: ieLineTotal(it)}));
+  loc.sale.subtotal = subtotal;
+  loc.sale.overallDiscountPercent = editingOverallDiscount;
+  loc.sale.total = total;
+
+  if(loc.type==='archive'){
+    loc.batch.total = loc.batch.total - oldTotal + total;
+  }
+
+  addMovement('تعديل فاتورة', `تم تعديل الفاتورة رقم ${loc.sale.id} — المجموع تغير من ${oldTotal.toFixed(2)} إلى ${total.toFixed(2)} د.م${stockChanges.length?' (تغييرات المخزون: '+stockChanges.join('، ')+')':''}`);
+
+  await persistProducts();
+  await persistArchive();
+  closeInvoiceEdit();
+  renderAdmin();
+  renderProducts();
+  showToast('تم حفظ تعديلات الفاتورة');
 }
 
 /* ===== Admin ===== */
@@ -1243,9 +1540,13 @@ function renderArchiveSection(){
             <tr>
               <td>${s.cashierName||'—'}</td>
               <td>${s.items.map(i=>`${i.name} ×${i.qty}`).join('، ')}</td>
-              <td class="nums">${s.total} د.م</td>
+              <td class="nums">${(+s.total).toFixed(2)} د.م</td>
               <td>${s.date}</td>
-              <td><button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="viewInvoice('${s.id}')">🧾 عرض الفاتورة</button></td>
+              <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="viewInvoice('${s.id}')">🧾 عرض</button>
+                <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="openInvoiceEdit('${s.id}')">✏️ تعديل</button>
+                <button class="icon-del" onclick="deleteInvoice('${s.id}')">🗑️</button>
+              </td>
             </tr>`).join('')}
         </tbody>
       </table>
@@ -1426,7 +1727,11 @@ function renderAdmin(){
           <td>${s.items.map(i=>`${i.name} ×${i.qty}`).join('، ')}</td>
           <td class="nums">${s.total} د.م</td>
           <td>${s.date}</td>
-          <td><button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="viewInvoice('${s.id}')">🧾 عرض الفاتورة</button></td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="viewInvoice('${s.id}')">🧾 عرض</button>
+            <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="openInvoiceEdit('${s.id}')">✏️ تعديل</button>
+            <button class="icon-del" onclick="deleteInvoice('${s.id}')">🗑️</button>
+          </td>
         </tr>`).join('')}
     </tbody>`;
 
@@ -1435,7 +1740,9 @@ function renderAdmin(){
     'تعديل المخزون': 'color:var(--gold);font-weight:700;',
     'بيع': 'color:var(--ink-soft);font-weight:700;',
     'حذف منتج': 'color:var(--wine-deep);font-weight:700;',
-    'تصفير الحسابات': 'color:var(--wine-deep);font-weight:700;'
+    'تصفير الحسابات': 'color:var(--wine-deep);font-weight:700;',
+    'حذف فاتورة': 'color:var(--wine-deep);font-weight:700;',
+    'تعديل فاتورة': 'color:var(--gold);font-weight:700;'
   };
   document.getElementById('movementsTable').innerHTML = `
     <thead><tr><th>النوع</th><th>التفاصيل</th><th>التاريخ</th></tr></thead>
@@ -1637,9 +1944,9 @@ async function deleteProduct(id){
   showToast('تم حذف المنتوج');
 }
 
-// النقر خارج نافذة "إضافة/تعديل منتوج" أو "إضافة/تعديل مستخدم" ما كيسدهاش،
+// النقر خارج نافذة "إضافة/تعديل منتوج" أو "إضافة/تعديل مستخدم" أو "تعديل الفاتورة" ما كيسدهاش،
 // باش ما تضيعش المعلومات لي دخلتيها بالغلط بضغطة برا. التسدّ غير بزر ✕ أو بعد الحفظ.
-const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay'];
+const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay', 'invoiceEditOverlay'];
 document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click', e=>{ if(e.target===ov && !OVERLAYS_NO_OUTSIDE_CLOSE.includes(ov.id)) ov.classList.remove('show'); });
 });
