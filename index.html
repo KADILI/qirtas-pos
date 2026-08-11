@@ -182,6 +182,8 @@
   .inv-title{ text-align:left; }
   .inv-title .inv-title-main{ font-size:20px; font-weight:900; color:var(--wine); }
   .inv-meta{ text-align:left; font-size:12.5px; color:var(--ink-soft); margin-top:6px; line-height:1.7; }
+  .inv-customer{ font-size:12.5px; color:var(--ink); margin-top:6px; line-height:1.7; text-align:left; }
+  .inv-customer b{ color:var(--wine); }
   .inv-table{ width:100%; border-collapse:collapse; margin-bottom:16px; }
   .inv-table th{ background:var(--paper-deep); text-align:right; padding:9px 10px; font-size:13px; border:1px solid var(--paper-deep); }
   .inv-table td{ padding:8px 10px; font-size:13px; border:1px solid var(--paper-deep); }
@@ -254,6 +256,15 @@
   }
   .discount-amount-row{ color:var(--wine-deep) !important; }
 
+  /* Customer info block above the discount row on the cashier side */
+  .customer-row{
+    display:flex; gap:8px; margin-bottom:10px;
+  }
+  .customer-row input{
+    flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--paper-deep);
+    font-family:'Tajawal'; font-size:13px;
+  }
+
   /* Sales date-range filter bar (Admin & Reports) */
   .date-range-bar{
     display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
@@ -318,6 +329,7 @@
     <div id="currentUserBadge" style="font-size:13px;color:var(--gold-soft);"></div>
     <div class="actions">
       <button class="icon-btn" onclick="manualSync()">🔄 تحديث</button>
+      <button class="icon-btn" onclick="openInvoiceLookup()">🔍 بحث عن فاتورة</button>
       <button class="icon-btn active-mode" id="posTabBtn" onclick="showTab('pos')">🧾 الكاشير</button>
       <button class="icon-btn" id="adminTabBtn" onclick="showTab('admin')" style="display:none;">⚙️ الإدارة والتقارير</button>
       <button class="icon-btn" onclick="siteLogout()">🚪 خروج</button>
@@ -344,6 +356,10 @@
       </div>
       <div class="order-list" id="orderList"></div>
       <div class="order-summary">
+        <div class="customer-row">
+          <input type="text" id="customerNameInput" placeholder="اسم العميل (اختياري)" oninput="renderOrder()">
+          <input type="text" id="customerPhoneInput" placeholder="رقم الهاتف (اختياري)" class="nums" oninput="renderOrder()">
+        </div>
         <div class="sum-row"><span>عدد القطع</span><span class="nums" id="itemCount">0</span></div>
         <div class="sum-row"><span>المجموع الفرعي</span><span class="nums" id="subTotalDisplay">0 د.م</span></div>
 
@@ -534,6 +550,10 @@
       <h2 style="margin:0;">تعديل الفاتورة <span id="ieInvoiceId" class="nums"></span></h2>
       <button class="close-x" onclick="closeInvoiceEdit()">✕</button>
     </div>
+    <div class="row2" style="margin-bottom:10px;">
+      <div class="field"><label>اسم العميل</label><input type="text" id="ieCustomerName" placeholder="اسم العميل (اختياري)"></div>
+      <div class="field"><label>رقم الهاتف</label><input type="text" id="ieCustomerPhone" class="nums" placeholder="رقم الهاتف (اختياري)"></div>
+    </div>
     <div id="ieItemsList"></div>
     <div class="overall-discount-row" style="margin-top:10px;">
       <label for="ieOverallDiscount">نسبة تخفيض على المجموع</label>
@@ -543,6 +563,24 @@
     <div class="sum-row total"><span>المجموع النهائي</span><span class="nums" id="ieTotal">0 د.م</span></div>
     <button class="btn btn-primary" onclick="saveInvoiceEdit()">حفظ التعديلات</button>
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">ملاحظة: تعديل الكمية غادي يأثر على المخزون تلقائيا (زيادة الكمية كتنقص من المخزون، ونقصانها أو حذف المنتوج كيرجع الكمية للمخزون).</p>
+  </div>
+</div>
+
+<!-- Invoice Lookup Modal (search by invoice number, available to cashier & admin) -->
+<div class="overlay" id="invoiceLookupOverlay">
+  <div class="modal-box">
+    <div class="drawer-head">
+      <h2 style="margin:0;">🔍 بحث عن فاتورة برقمها</h2>
+      <button class="close-x" onclick="closeInvoiceLookup()">✕</button>
+    </div>
+    <div class="field">
+      <label>رقم الفاتورة</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="invoiceLookupInput" class="nums" placeholder="مثال: s1723456789012" style="flex:1;">
+        <button type="button" class="btn btn-primary" style="white-space:nowrap;" onclick="runInvoiceLookup()">بحث</button>
+      </div>
+    </div>
+    <div id="invoiceLookupResults"></div>
   </div>
 </div>
 
@@ -944,6 +982,8 @@ function clearOrder(){
   overallDiscountPercent = 0;
   const overallInput = document.getElementById('overallDiscountInput');
   if(overallInput) overallInput.value = 0;
+  document.getElementById('customerNameInput').value = '';
+  document.getElementById('customerPhoneInput').value = '';
   renderOrder();
 }
 
@@ -1049,13 +1089,32 @@ function generateQuote(){
     const discount = orderDiscount[id]||0;
     return {id:p.id, name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal:lineSubtotal(id)};
   });
+  const customerName = document.getElementById('customerNameInput').value.trim();
+  const customerPhone = document.getElementById('customerPhoneInput').value.trim();
   const quote = {
     items, subtotal, overallDiscountPercent, total,
+    customerName, customerPhone,
     date: new Date().toLocaleString('ar-MA')
   };
   showQuote(quote);
   // quotes are informational only: no stock change, no sale recorded, order stays as-is
   // so the cashier can still finish the real sale afterwards if the customer agrees
+}
+
+// builds the small customer-info block shown under the invoice meta (date/cashier/etc)
+// on both the A4 layout and returns nothing if no customer info was entered
+function customerBlockHtml(customerName, customerPhone){
+  if(!customerName && !customerPhone) return '';
+  return `<div class="inv-customer">
+    ${customerName ? `<div><b>العميل:</b> ${customerName}</div>` : ''}
+    ${customerPhone ? `<div><b>الهاتف:</b> <span class="nums">${customerPhone}</span></div>` : ''}
+  </div>`;
+}
+function customerThermalLines(customerName, customerPhone){
+  const lines = [];
+  if(customerName) lines.push(`العميل: ${customerName}`);
+  if(customerPhone) lines.push(`الهاتف: ${customerPhone}`);
+  return lines;
 }
 
 function showQuote(quote){
@@ -1070,6 +1129,7 @@ function showQuote(quote){
           <div class="inv-meta">
             <div>التاريخ: ${quote.date}</div>
           </div>
+          ${customerBlockHtml(quote.customerName, quote.customerPhone)}
         </div>
       </div>
       <table class="inv-table">
@@ -1096,7 +1156,7 @@ function showQuote(quote){
     </div>
   ` + buildThermalHtml({
     title: 'تسعيرة تقديرية',
-    metaLines: [`التاريخ: ${quote.date}`],
+    metaLines: [`التاريخ: ${quote.date}`, ...customerThermalLines(quote.customerName, quote.customerPhone)],
     items: quote.items,
     subtotal: quote.subtotal,
     overallDiscountPercent: quote.overallDiscountPercent,
@@ -1120,16 +1180,19 @@ async function finishSale(){
     p.stock -= order[id];
     return {id:p.id, name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal};
   });
+  const customerName = document.getElementById('customerNameInput').value.trim();
+  const customerPhone = document.getElementById('customerPhoneInput').value.trim();
   const sale = {
     id: 's'+Date.now(),
     items, subtotal, overallDiscountPercent, total,
+    customerName, customerPhone,
     cashierUsername: currentUser ? currentUser.username : 'غير معروف',
     cashierName: currentUser ? currentUser.name : 'غير معروف',
     date: new Date().toLocaleString('ar-MA'),
     timestamp: Date.now()
   };
   sales.unshift(sale);
-  addMovement('بيع', `عملية بيع بقيمة ${total.toFixed(2)} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})`);
+  addMovement('بيع', `عملية بيع بقيمة ${total.toFixed(2)} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})${customerName?` — العميل: ${customerName}`:''}`);
 
   await persistProducts();
   await persistSales();
@@ -1142,6 +1205,8 @@ async function finishSale(){
   overallDiscountPercent = 0;
   const overallInput = document.getElementById('overallDiscountInput');
   if(overallInput) overallInput.value = 0;
+  document.getElementById('customerNameInput').value = '';
+  document.getElementById('customerPhoneInput').value = '';
   renderOrder();
 }
 
@@ -1163,6 +1228,7 @@ function showReceipt(sale, isReprint){
             <div>التاريخ: ${sale.date}</div>
             <div>الكاشير: ${sale.cashierName||'—'}</div>
           </div>
+          ${customerBlockHtml(sale.customerName, sale.customerPhone)}
         </div>
       </div>
       <table class="inv-table">
@@ -1188,7 +1254,7 @@ function showReceipt(sale, isReprint){
     </div>
   ` + buildThermalHtml({
     title: 'فاتورة بيع',
-    metaLines: [`رقم البيع: ${sale.id}`, `التاريخ: ${sale.date}`, `الكاشير: ${sale.cashierName||'—'}`],
+    metaLines: [`رقم البيع: ${sale.id}`, `التاريخ: ${sale.date}`, `الكاشير: ${sale.cashierName||'—'}`, ...customerThermalLines(sale.customerName, sale.customerPhone)],
     items: sale.items,
     subtotal: subtotal,
     overallDiscountPercent: overallDisc,
@@ -1284,14 +1350,15 @@ function getAllInvoices(){
 function renderInvoicesTable(){
   const term = (document.getElementById('invoiceSearch').value||'').trim().toLowerCase();
   const invoices = getAllInvoices().filter(s=>
-    !term || s.id.toLowerCase().includes(term) || (s.cashierName||'').toLowerCase().includes(term)
+    !term || s.id.toLowerCase().includes(term) || (s.cashierName||'').toLowerCase().includes(term) || (s.customerName||'').toLowerCase().includes(term)
   );
   document.getElementById('invoicesTable').innerHTML = `
-    <thead><tr><th>رقم الفاتورة</th><th>الكاشير</th><th>المجموع</th><th>التاريخ</th><th></th></tr></thead>
-    <tbody>${invoices.length===0 ? `<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:16px;">لا توجد فواتير بعد</td></tr>` :
+    <thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>الكاشير</th><th>المجموع</th><th>التاريخ</th><th></th></tr></thead>
+    <tbody>${invoices.length===0 ? `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:16px;">لا توجد فواتير بعد</td></tr>` :
       invoices.map(s=>`
         <tr>
           <td class="nums">${s.id}</td>
+          <td>${s.customerName ? s.customerName + (s.customerPhone ? ' — '+s.customerPhone : '') : '—'}</td>
           <td>${s.cashierName||'—'}</td>
           <td class="nums">${(+s.total).toFixed(2)} د.م</td>
           <td>${s.date}</td>
@@ -1307,6 +1374,58 @@ function viewInvoice(id){
   const sale = findSaleById(id);
   if(!sale){ showToast('ماكايناش هاذ الفاتورة'); return; }
   showReceipt(sale, true);
+}
+
+/* ===== Invoice lookup (by invoice number) — available to cashier & admin from the topbar ===== */
+function openInvoiceLookup(){
+  document.getElementById('invoiceLookupInput').value = '';
+  document.getElementById('invoiceLookupResults').innerHTML = '';
+  document.getElementById('invoiceLookupOverlay').classList.add('show');
+  setTimeout(()=>document.getElementById('invoiceLookupInput').focus(), 50);
+}
+function closeInvoiceLookup(){
+  document.getElementById('invoiceLookupOverlay').classList.remove('show');
+}
+document.getElementById('invoiceLookupInput')?.addEventListener('keydown', e=>{
+  if(e.key === 'Enter') runInvoiceLookup();
+});
+function runInvoiceLookup(){
+  const term = document.getElementById('invoiceLookupInput').value.trim().toLowerCase();
+  const resultsWrap = document.getElementById('invoiceLookupResults');
+  if(!term){
+    resultsWrap.innerHTML = `<p style="color:var(--ink-soft);text-align:center;padding:10px;">دخل رقم الفاتورة باش نبحثو ليك عليها</p>`;
+    return;
+  }
+  // exact match on invoice number is the common case, but also allow a partial
+  // number search (in case the cashier only remembers part of it)
+  const matches = getAllInvoices().filter(s => s.id.toLowerCase().includes(term));
+  if(matches.length===0){
+    resultsWrap.innerHTML = `<p style="color:var(--wine-deep);text-align:center;padding:10px;">ماكايناش فاتورة برقم "${document.getElementById('invoiceLookupInput').value.trim()}"</p>`;
+    return;
+  }
+  if(matches.length===1){
+    // single exact/near match: open it directly
+    closeInvoiceLookup();
+    showReceipt(matches[0], true);
+    return;
+  }
+  // multiple matches (partial number): let the cashier pick the right one
+  resultsWrap.innerHTML = `
+    <div class="table-wrap" style="margin-top:8px;">
+      <table>
+        <thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>المجموع</th><th>التاريخ</th><th></th></tr></thead>
+        <tbody>
+          ${matches.map(s=>`
+            <tr>
+              <td class="nums">${s.id}</td>
+              <td>${s.customerName || '—'}</td>
+              <td class="nums">${(+s.total).toFixed(2)} د.م</td>
+              <td>${s.date}</td>
+              <td><button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="closeInvoiceLookup(); showReceipt(findSaleById('${s.id}'), true);">🧾 عرض</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 /* ===== Delete / edit invoices ===== */
@@ -1362,6 +1481,8 @@ function openInvoiceEdit(id){
   editingOverallDiscount = loc.sale.overallDiscountPercent || 0;
   document.getElementById('ieInvoiceId').textContent = '#'+id;
   document.getElementById('ieOverallDiscount').value = editingOverallDiscount;
+  document.getElementById('ieCustomerName').value = loc.sale.customerName || '';
+  document.getElementById('ieCustomerPhone').value = loc.sale.customerPhone || '';
   renderInvoiceEditItems();
   document.getElementById('invoiceEditOverlay').classList.add('show');
 }
@@ -1468,6 +1589,8 @@ async function saveInvoiceEdit(){
   loc.sale.subtotal = subtotal;
   loc.sale.overallDiscountPercent = editingOverallDiscount;
   loc.sale.total = total;
+  loc.sale.customerName = document.getElementById('ieCustomerName').value.trim();
+  loc.sale.customerPhone = document.getElementById('ieCustomerPhone').value.trim();
 
   if(loc.type==='archive'){
     loc.batch.total = loc.batch.total - oldTotal + total;
@@ -1946,7 +2069,7 @@ async function deleteProduct(id){
 
 // النقر خارج نافذة "إضافة/تعديل منتوج" أو "إضافة/تعديل مستخدم" أو "تعديل الفاتورة" ما كيسدهاش،
 // باش ما تضيعش المعلومات لي دخلتيها بالغلط بضغطة برا. التسدّ غير بزر ✕ أو بعد الحفظ.
-const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay', 'invoiceEditOverlay'];
+const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay', 'invoiceEditOverlay', 'invoiceLookupOverlay'];
 document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click', e=>{ if(e.target===ov && !OVERLAYS_NO_OUTSIDE_CLOSE.includes(ov.id)) ov.classList.remove('show'); });
 });
