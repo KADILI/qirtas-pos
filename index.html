@@ -428,7 +428,7 @@
           <div class="section-head">
             <h3 style="margin:0;">🧾 سجل الفواتير (كل فاتورة بمفردها)</h3>
           </div>
-          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">هنا كتلقى كل فاتورة ديرت من أي وقت، وحدة وحدة برقمها، سواء كانت فـ"سجل المبيعات" الحالي أو تصفرات من قبل ودخلات للأرشيف. أي فاتورة تقدر تعاود تشوفها وتطبعها أو تعدلها أو تحذفها فأي وقت.</p>
+          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">هنا كتلقى كل فاتورة ديرت من أي وقت، وحدة وحدة برقمها، سواء كانت فـ"سجل المبيعات" الحالي أو تصفرات من قبل ودخلات للأرشيف، وكذلك التسعيرات (بدون بيع). أي فاتورة أو تسعيرة تقدر تعاود تشوفها وتطبعها أو تعدلها أو تحذفها فأي وقت.</p>
           <div class="search-row" style="margin-bottom:10px;">
             <input type="text" id="invoiceSearch" placeholder="🔍 ابحث برقم الفاتورة أو اسم الكاشير..." oninput="renderInvoicesTable()">
           </div>
@@ -547,7 +547,7 @@
 <div class="overlay" id="invoiceEditOverlay">
   <div class="modal-box" style="width:min(560px,94vw);">
     <div class="drawer-head">
-      <h2 style="margin:0;">تعديل الفاتورة <span id="ieInvoiceId" class="nums"></span></h2>
+      <h2 style="margin:0;"><span id="ieModalLabel">تعديل الفاتورة</span> <span id="ieInvoiceId" class="nums"></span></h2>
       <button class="close-x" onclick="closeInvoiceEdit()">✕</button>
     </div>
     <div class="row2" style="margin-bottom:10px;">
@@ -562,7 +562,7 @@
     <div class="sum-row"><span>المجموع الفرعي</span><span class="nums" id="ieSubtotal">0 د.م</span></div>
     <div class="sum-row total"><span>المجموع النهائي</span><span class="nums" id="ieTotal">0 د.م</span></div>
     <button class="btn btn-primary" onclick="saveInvoiceEdit()">حفظ التعديلات</button>
-    <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">ملاحظة: تعديل الكمية غادي يأثر على المخزون تلقائيا (زيادة الكمية كتنقص من المخزون، ونقصانها أو حذف المنتوج كيرجع الكمية للمخزون).</p>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;" id="ieStockNote">ملاحظة: تعديل الكمية غادي يأثر على المخزون تلقائيا (زيادة الكمية كتنقص من المخزون، ونقصانها أو حذف المنتوج كيرجع الكمية للمخزون).</p>
   </div>
 </div>
 
@@ -642,6 +642,7 @@ const SCHOOL_LEVELS = [
 
 let products = [];
 let sales = [];
+let quotes = []; // تسعيرات محفوظة (بدون بيع) — كتبقى ليها سجل بحالها بحال الفواتير، ولكن ماتأثرش على المخزون
 let archivedSales = []; // batches of sales tucked away here whenever "تصفير الحسابات" is used, so nothing is lost
 let movements = [];
 let users = [];
@@ -739,6 +740,7 @@ async function loadData(){
       const data = snap.data();
       products = data.products || defaultProducts;
       sales = data.sales || [];
+      quotes = data.quotes || [];
       archivedSales = data.archivedSales || [];
       movements = data.movements || [];
       users = (data.users && data.users.length) ? data.users : defaultUsers;
@@ -748,15 +750,17 @@ async function loadData(){
     }else{
       products = defaultProducts;
       sales = [];
+      quotes = [];
       archivedSales = [];
       movements = [];
       users = defaultUsers;
-      await setDoc(storeRef, {products, sales, archivedSales, movements, users});
+      await setDoc(storeRef, {products, sales, quotes, archivedSales, movements, users});
     }
   }catch(e){
     console.error(e);
     products = defaultProducts;
     sales = [];
+    quotes = [];
     users = defaultUsers;
     const statusEl = document.getElementById('syncStatus');
     statusEl.textContent = '⚠️ تحقق من إعدادات Firebase';
@@ -779,6 +783,7 @@ function listenRealtime(){
     const data = snap.data();
     if(data.products) products = data.products;
     if(data.sales) sales = data.sales;
+    if(data.quotes) quotes = data.quotes;
     if(data.archivedSales) archivedSales = data.archivedSales;
     if(data.movements) movements = data.movements;
     if(data.users && data.users.length) users = data.users;
@@ -806,6 +811,11 @@ async function persistSales(){
   const { setDoc, storeRef } = window.__fb;
   try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
   catch(e){ showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); }
+}
+async function persistQuotes(){
+  const { setDoc, storeRef } = window.__fb;
+  try{ await setDoc(storeRef, {quotes, movements}, {merge:true}); }
+  catch(e){ showToast('تعذر حفظ التسعيرة — تحقق من إعدادات Firebase'); }
 }
 async function persistUsers(){
   const { setDoc, storeRef } = window.__fb;
@@ -1079,7 +1089,9 @@ function renderOrder(){
 
 /* ===== Sale finalization ===== */
 
-function generateQuote(){
+// تسعيرة تقديرية: كتنحفظ فسجل خاص بيها (quotes)، بحال الفاتورة تماما (رقم، تاريخ، عميل، منتوجات...)
+// لكن ماكتأثرش على المخزون، وماكتدخلش فحسابات المبيعات/الإيرادات
+async function generateQuote(){
   const ids = Object.keys(order);
   if(ids.length===0) return;
   const subtotal = orderSubtotal();
@@ -1092,11 +1104,21 @@ function generateQuote(){
   const customerName = document.getElementById('customerNameInput').value.trim();
   const customerPhone = document.getElementById('customerPhoneInput').value.trim();
   const quote = {
+    id: 'q'+Date.now(),
+    docType: 'quote',
     items, subtotal, overallDiscountPercent, total,
     customerName, customerPhone,
-    date: new Date().toLocaleString('ar-MA')
+    cashierUsername: currentUser ? currentUser.username : 'غير معروف',
+    cashierName: currentUser ? currentUser.name : 'غير معروف',
+    date: new Date().toLocaleString('ar-MA'),
+    timestamp: Date.now()
   };
+  quotes.unshift(quote);
+  addMovement('تسعيرة', `تسعيرة تقديرية رقم ${quote.id} بقيمة ${total.toFixed(2)} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})${customerName?` — العميل: ${customerName}`:''}`);
+
+  await persistQuotes();
   showQuote(quote);
+  if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
   // quotes are informational only: no stock change, no sale recorded, order stays as-is
   // so the cashier can still finish the real sale afterwards if the customer agrees
 }
@@ -1117,9 +1139,12 @@ function customerThermalLines(customerName, customerPhone){
   return lines;
 }
 
-function showQuote(quote){
-  document.getElementById('receiptModalTitle').textContent = '📋 تسعيرة (بدون بيع)';
+// isReprint=true means we're re-opening a previously saved quote from the log
+// (not generating a fresh one), so the modal title reflects that
+function showQuote(quote, isReprint){
+  document.getElementById('receiptModalTitle').textContent = isReprint ? '🧾 نسخة من التسعيرة' : '📋 تسعيرة (بدون بيع)';
   document.getElementById('receiptCloseBtn').textContent = 'إغلاق';
+  const overallDisc = quote.overallDiscountPercent || 0;
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-a4" id="invoiceA4">
       <div class="inv-header">
@@ -1127,7 +1152,9 @@ function showQuote(quote){
         <div class="inv-title">
           <div class="inv-title-main">تسعيرة تقديرية</div>
           <div class="inv-meta">
+            <div>رقم التسعيرة: ${quote.id}</div>
             <div>التاريخ: ${quote.date}</div>
+            <div>الكاشير: ${quote.cashierName||'—'}</div>
           </div>
           ${customerBlockHtml(quote.customerName, quote.customerPhone)}
         </div>
@@ -1142,24 +1169,24 @@ function showQuote(quote){
               <td class="center nums">${i.price} د.م</td>
               <td class="center nums">${i.qty}</td>
               <td class="center nums">${i.discount>0?i.discount+'%':'—'}</td>
-              <td class="center nums">${i.lineTotal.toFixed(2)} د.م</td>
+              <td class="center nums">${(+i.lineTotal).toFixed(2)} د.م</td>
             </tr>`).join('')}
         </tbody>
       </table>
       <div class="inv-summary">
-        <div class="inv-summary-row"><span>المجموع الفرعي</span><span class="nums">${quote.subtotal.toFixed(2)} د.م</span></div>
-        ${quote.overallDiscountPercent>0 ? `<div class="inv-summary-row discount"><span>خصم على المجموع (${quote.overallDiscountPercent}%)</span><span class="nums">- ${(quote.subtotal-quote.total).toFixed(2)} د.م</span></div>` : ''}
-        <div class="inv-summary-total"><span>المجموع التقديري</span><span class="nums">${quote.total.toFixed(2)} د.م</span></div>
+        <div class="inv-summary-row"><span>المجموع الفرعي</span><span class="nums">${(+quote.subtotal).toFixed(2)} د.م</span></div>
+        ${overallDisc>0 ? `<div class="inv-summary-row discount"><span>خصم على المجموع (${overallDisc}%)</span><span class="nums">- ${(quote.subtotal-quote.total).toFixed(2)} د.م</span></div>` : ''}
+        <div class="inv-summary-total"><span>المجموع التقديري</span><span class="nums">${(+quote.total).toFixed(2)} د.م</span></div>
       </div>
       <div class="inv-note">⚠️ هذه تسعيرة تقديرية فقط وليست فاتورة بيع، والأسعار قابلة للتغيير</div>
       <div class="inv-footer">مكتبة منار — شكرا لثقتكم 🌿</div>
     </div>
   ` + buildThermalHtml({
     title: 'تسعيرة تقديرية',
-    metaLines: [`التاريخ: ${quote.date}`, ...customerThermalLines(quote.customerName, quote.customerPhone)],
+    metaLines: [`رقم التسعيرة: ${quote.id}`, `التاريخ: ${quote.date}`, `الكاشير: ${quote.cashierName||'—'}`, ...customerThermalLines(quote.customerName, quote.customerPhone)],
     items: quote.items,
     subtotal: quote.subtotal,
-    overallDiscountPercent: quote.overallDiscountPercent,
+    overallDiscountPercent: overallDisc,
     total: quote.total,
     noteText: '⚠️ تسعيرة تقديرية فقط، وليست فاتورة بيع',
     footer: 'مكتبة منار — شكرا لثقتكم 🌿'
@@ -1184,6 +1211,7 @@ async function finishSale(){
   const customerPhone = document.getElementById('customerPhoneInput').value.trim();
   const sale = {
     id: 's'+Date.now(),
+    docType: 'sale',
     items, subtotal, overallDiscountPercent, total,
     customerName, customerPhone,
     cashierUsername: currentUser ? currentUser.username : 'غير معروف',
@@ -1321,13 +1349,16 @@ function printReceipt(mode){
   setTimeout(()=>window.print(), 50);
 }
 
-// looks up a sale by id in both the live sales log AND every archived batch
-// (a sale never truly disappears: it's either in `sales` or tucked inside `archivedSales`),
-// so any invoice can always be re-opened, re-printed, edited, or deleted from here.
-// returns {sale, type:'live'|'archive', index, batch?} or null
+// looks up a record by id in the live sales log, the live quotes log, AND every
+// archived sales batch (a sale never truly disappears: it's either in `sales` or
+// tucked inside `archivedSales`; a quote lives in `quotes`), so any invoice or
+// quote can always be re-opened, re-printed, edited, or deleted from here.
+// returns {sale, type:'live'|'quote'|'archive', index, batch?} or null
 function locateSale(id){
   let idx = sales.findIndex(s=>s.id===id);
   if(idx>-1) return {sale: sales[idx], type:'live', index: idx};
+  let qidx = quotes.findIndex(q=>q.id===id);
+  if(qidx>-1) return {sale: quotes[qidx], type:'quote', index: qidx};
   for(const batch of archivedSales){
     const idx2 = batch.items.findIndex(s=>s.id===id);
     if(idx2>-1) return {sale: batch.items[idx2], type:'archive', index: idx2, batch};
@@ -1338,12 +1369,12 @@ function findSaleById(id){
   const loc = locateSale(id);
   return loc ? loc.sale : null;
 }
-// every invoice ever made, each kept as its own individual record — whether it's
-// still in the live "سجل المبيعات" or was moved into an archive batch by "تصفير الحسابات".
-// nothing here is summarized or grouped: one row = one invoice, forever.
+// every invoice AND every quote ever made, each kept as its own individual record —
+// whether still in the live "سجل المبيعات", in the live quotes log, or moved into an
+// archive batch by "تصفير الحسابات". nothing here is summarized or grouped: one row = one record, forever.
 function getAllInvoices(){
   const fromArchives = archivedSales.flatMap(batch=>batch.items);
-  const all = sales.concat(fromArchives);
+  const all = sales.concat(quotes, fromArchives);
   all.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
   return all;
 }
@@ -1353,11 +1384,12 @@ function renderInvoicesTable(){
     !term || s.id.toLowerCase().includes(term) || (s.cashierName||'').toLowerCase().includes(term) || (s.customerName||'').toLowerCase().includes(term)
   );
   document.getElementById('invoicesTable').innerHTML = `
-    <thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>الكاشير</th><th>المجموع</th><th>التاريخ</th><th></th></tr></thead>
-    <tbody>${invoices.length===0 ? `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:16px;">لا توجد فواتير بعد</td></tr>` :
+    <thead><tr><th>رقم الفاتورة</th><th>النوع</th><th>العميل</th><th>الكاشير</th><th>المجموع</th><th>التاريخ</th><th></th></tr></thead>
+    <tbody>${invoices.length===0 ? `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:16px;">لا توجد فواتير بعد</td></tr>` :
       invoices.map(s=>`
         <tr>
           <td class="nums">${s.id}</td>
+          <td>${s.docType==='quote' ? '📋 تسعيرة' : '🧾 بيع'}</td>
           <td>${s.customerName ? s.customerName + (s.customerPhone ? ' — '+s.customerPhone : '') : '—'}</td>
           <td>${s.cashierName||'—'}</td>
           <td class="nums">${(+s.total).toFixed(2)} د.م</td>
@@ -1372,8 +1404,9 @@ function renderInvoicesTable(){
 }
 function viewInvoice(id){
   const sale = findSaleById(id);
-  if(!sale){ showToast('ماكايناش هاذ الفاتورة'); return; }
-  showReceipt(sale, true);
+  if(!sale){ showToast('ماكاينش هاذ السجل'); return; }
+  if(sale.docType==='quote') showQuote(sale, true);
+  else showReceipt(sale, true);
 }
 
 /* ===== Invoice lookup (by invoice number) — available to cashier & admin from the topbar ===== */
@@ -1406,47 +1439,56 @@ function runInvoiceLookup(){
   if(matches.length===1){
     // single exact/near match: open it directly
     closeInvoiceLookup();
-    showReceipt(matches[0], true);
+    viewInvoice(matches[0].id);
     return;
   }
   // multiple matches (partial number): let the cashier pick the right one
   resultsWrap.innerHTML = `
     <div class="table-wrap" style="margin-top:8px;">
       <table>
-        <thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>المجموع</th><th>التاريخ</th><th></th></tr></thead>
+        <thead><tr><th>رقم الفاتورة</th><th>النوع</th><th>العميل</th><th>المجموع</th><th>التاريخ</th><th></th></tr></thead>
         <tbody>
           ${matches.map(s=>`
             <tr>
               <td class="nums">${s.id}</td>
+              <td>${s.docType==='quote' ? '📋 تسعيرة' : '🧾 بيع'}</td>
               <td>${s.customerName || '—'}</td>
               <td class="nums">${(+s.total).toFixed(2)} د.م</td>
               <td>${s.date}</td>
-              <td><button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="closeInvoiceLookup(); showReceipt(findSaleById('${s.id}'), true);">🧾 عرض</button></td>
+              <td><button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="closeInvoiceLookup(); viewInvoice('${s.id}');">🧾 عرض</button></td>
             </tr>`).join('')}
         </tbody>
       </table>
     </div>`;
 }
 
-/* ===== Delete / edit invoices ===== */
+/* ===== Delete / edit invoices & quotes ===== */
 
-// deletes an invoice permanently (from the live sales log or from an archive batch)
-// and restores its items' quantities back into stock, since the sale is being undone
+// deletes an invoice or quote permanently (from the live sales log, the live quotes
+// log, or from an archive batch). If it's a real sale, its items' quantities are
+// restored back into stock since the sale is being undone; quotes never touched
+// stock in the first place, so nothing is restored for them.
 async function deleteInvoice(id){
   const loc = locateSale(id);
-  if(!loc){ showToast('ماكايناش هاذ الفاتورة'); return; }
+  if(!loc){ showToast('ماكاينش هاذ السجل'); return; }
   const sale = loc.sale;
-  const ok = confirm(`واش متأكد من حذف الفاتورة رقم ${sale.id} بقيمة ${(+sale.total).toFixed(2)} د.م؟\nغادي ترجع كميات المنتوجات لي كانت فيها للمخزون، وهاذ العملية ماغاتقدرش ترجع لور.`);
+  const isQuote = loc.type === 'quote' || sale.docType === 'quote';
+  const label = isQuote ? 'التسعيرة' : 'الفاتورة';
+  const ok = confirm(`واش متأكد من حذف ${label} رقم ${sale.id} بقيمة ${(+sale.total).toFixed(2)} د.م؟${isQuote ? '' : '\nغادي ترجع كميات المنتوجات لي كانت فيها للمخزون.'}\nهاذ العملية ماغاتقدرش ترجع لور.`);
   if(!ok) return;
 
   const restored = [];
-  sale.items.forEach(it=>{
-    const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
-    if(p){ p.stock += it.qty; restored.push(`${p.name} +${it.qty}`); }
-  });
+  if(!isQuote){
+    sale.items.forEach(it=>{
+      const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
+      if(p){ p.stock += it.qty; restored.push(`${p.name} +${it.qty}`); }
+    });
+  }
 
   if(loc.type==='live'){
     sales.splice(loc.index,1);
+  }else if(loc.type==='quote'){
+    quotes.splice(loc.index,1);
   }else{
     loc.batch.items.splice(loc.index,1);
     loc.batch.count = loc.batch.items.length;
@@ -1456,33 +1498,38 @@ async function deleteInvoice(id){
     }
   }
 
-  addMovement('حذف فاتورة', `تم حذف الفاتورة رقم ${sale.id} بقيمة ${(+sale.total).toFixed(2)} د.م${restored.length?' وتمت إعادة الكميات للمخزون: '+restored.join('، '):''}`);
+  addMovement(isQuote ? 'حذف تسعيرة' : 'حذف فاتورة', `تم حذف ${label} رقم ${sale.id} بقيمة ${(+sale.total).toFixed(2)} د.م${restored.length?' وتمت إعادة الكميات للمخزون: '+restored.join('، '):''}`);
 
-  await persistProducts();
-  await persistArchive();
+  if(!isQuote) await persistProducts();
+  if(loc.type==='quote') await persistQuotes();
+  else await persistArchive();
   renderAdmin();
   renderProducts();
-  showToast('تم حذف الفاتورة');
+  showToast(isQuote ? 'تم حذف التسعيرة' : 'تم حذف الفاتورة');
 }
 
-// ===== Invoice edit modal state =====
+// ===== Invoice/quote edit modal state =====
 let editingInvoiceId = null;
 let editingItems = [];
 let editingOverallDiscount = 0;
+let editingIsQuote = false;
 
 function ieLineTotal(it){ return it.price*it.qty*(1-(it.discount||0)/100); }
 function ieSubtotalCalc(){ return editingItems.reduce((s,it)=>s+ieLineTotal(it),0); }
 
 function openInvoiceEdit(id){
   const loc = locateSale(id);
-  if(!loc){ showToast('ماكايناش هاذ الفاتورة'); return; }
+  if(!loc){ showToast('ماكاينش هاذ السجل'); return; }
   editingInvoiceId = id;
+  editingIsQuote = (loc.type==='quote') || (loc.sale.docType==='quote');
   editingItems = loc.sale.items.map(it=>({...it}));
   editingOverallDiscount = loc.sale.overallDiscountPercent || 0;
+  document.getElementById('ieModalLabel').textContent = editingIsQuote ? 'تعديل التسعيرة' : 'تعديل الفاتورة';
   document.getElementById('ieInvoiceId').textContent = '#'+id;
   document.getElementById('ieOverallDiscount').value = editingOverallDiscount;
   document.getElementById('ieCustomerName').value = loc.sale.customerName || '';
   document.getElementById('ieCustomerPhone').value = loc.sale.customerPhone || '';
+  document.getElementById('ieStockNote').style.display = editingIsQuote ? 'none' : 'block';
   renderInvoiceEditItems();
   document.getElementById('invoiceEditOverlay').classList.add('show');
 }
@@ -1490,11 +1537,12 @@ function closeInvoiceEdit(){
   document.getElementById('invoiceEditOverlay').classList.remove('show');
   editingInvoiceId = null;
   editingItems = [];
+  editingIsQuote = false;
 }
 function renderInvoiceEditItems(){
   const wrap = document.getElementById('ieItemsList');
   if(editingItems.length===0){
-    wrap.innerHTML = `<div class="order-empty"><span class="mark">🧾</span>لا بقاو منتوجات فهاذ الفاتورة — يمكنك حذف الفاتورة كاملة بدل حفظها فارغة</div>`;
+    wrap.innerHTML = `<div class="order-empty"><span class="mark">🧾</span>لا بقاو منتوجات فهاذ ${editingIsQuote?'التسعيرة':'الفاتورة'} — يمكنك حذفها كاملة بدل حفظها فارغة</div>`;
   }else{
     wrap.innerHTML = editingItems.map((it,idx)=>`
       <div class="order-line">
@@ -1525,10 +1573,10 @@ function updateEditItemQty(idx, delta){
   if(!it) return;
   const newQty = it.qty + delta;
   if(newQty<=0){
-    if(!confirm(`تنقيص الكمية لـ"${it.name}" لـ0 غادي يحذفه من الفاتورة، متأكد؟`)) return;
+    if(!confirm(`تنقيص الكمية لـ"${it.name}" لـ0 غادي يحذفه من ${editingIsQuote?'التسعيرة':'الفاتورة'}، متأكد؟`)) return;
     editingItems.splice(idx,1);
   }else{
-    if(delta>0){
+    if(delta>0 && !editingIsQuote){
       const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
       if(p && p.stock<=0){ showToast('لا يوجد مخزون كافي لزيادة الكمية'); return; }
     }
@@ -1543,7 +1591,7 @@ function updateEditItemDiscount(idx, val){
   renderInvoiceEditItems();
 }
 function removeEditItem(idx){
-  if(!confirm('واش متأكد من حذف هذا المنتوج من الفاتورة؟')) return;
+  if(!confirm(`واش متأكد من حذف هذا المنتوج من ${editingIsQuote?'التسعيرة':'الفاتورة'}؟`)) return;
   editingItems.splice(idx,1);
   renderInvoiceEditItems();
 }
@@ -1555,31 +1603,34 @@ function renderInvoiceEditTotals(){
   document.getElementById('ieTotal').textContent = total.toFixed(2)+' د.م';
 }
 
-// saves edits to an existing invoice: recomputes totals, adjusts product stock by
-// the DIFFERENCE between old and new quantities (works whether the invoice is
-// still live or already archived), and logs the change in سجل الحركة
+// saves edits to an existing invoice or quote: recomputes totals. For a real sale
+// (live or archived), also adjusts product stock by the DIFFERENCE between old and
+// new quantities. For a quote, stock is never touched since a quote never reserved
+// or removed stock in the first place. Logs the change in سجل الحركة either way.
 async function saveInvoiceEdit(){
   const loc = locateSale(editingInvoiceId);
-  if(!loc){ showToast('تعذر إيجاد الفاتورة'); closeInvoiceEdit(); return; }
-  if(editingItems.length===0){ showToast('ما يمكنش تحفظ فاتورة فارغة — احذفها بدل ذلك'); return; }
+  if(!loc){ showToast('تعذر إيجاد السجل'); closeInvoiceEdit(); return; }
+  if(editingItems.length===0){ showToast(`ما يمكنش تحفظ ${editingIsQuote?'تسعيرة':'فاتورة'} فارغة — احذفها بدل ذلك`); return; }
 
-  const keyOf = it => it.id || it.name;
-  const oldQtyMap = {};
-  loc.sale.items.forEach(it=>{ oldQtyMap[keyOf(it)] = (oldQtyMap[keyOf(it)]||0) + it.qty; });
-  const newQtyMap = {};
-  editingItems.forEach(it=>{ newQtyMap[keyOf(it)] = (newQtyMap[keyOf(it)]||0) + it.qty; });
-  const allKeys = new Set([...Object.keys(oldQtyMap), ...Object.keys(newQtyMap)]);
   const stockChanges = [];
-  allKeys.forEach(key=>{
-    const diff = (newQtyMap[key]||0) - (oldQtyMap[key]||0); // >0 means more stock must be taken out
-    if(diff !== 0){
-      const p = products.find(x=>x.id===key || x.name===key);
-      if(p){
-        p.stock -= diff;
-        stockChanges.push(`${p.name}: ${diff>0?'-':'+'}${Math.abs(diff)}`);
+  if(!editingIsQuote){
+    const keyOf = it => it.id || it.name;
+    const oldQtyMap = {};
+    loc.sale.items.forEach(it=>{ oldQtyMap[keyOf(it)] = (oldQtyMap[keyOf(it)]||0) + it.qty; });
+    const newQtyMap = {};
+    editingItems.forEach(it=>{ newQtyMap[keyOf(it)] = (newQtyMap[keyOf(it)]||0) + it.qty; });
+    const allKeys = new Set([...Object.keys(oldQtyMap), ...Object.keys(newQtyMap)]);
+    allKeys.forEach(key=>{
+      const diff = (newQtyMap[key]||0) - (oldQtyMap[key]||0); // >0 means more stock must be taken out
+      if(diff !== 0){
+        const p = products.find(x=>x.id===key || x.name===key);
+        if(p){
+          p.stock -= diff;
+          stockChanges.push(`${p.name}: ${diff>0?'-':'+'}${Math.abs(diff)}`);
+        }
       }
-    }
-  });
+    });
+  }
 
   const subtotal = ieSubtotalCalc();
   const total = subtotal*(1-editingOverallDiscount/100);
@@ -1596,14 +1647,15 @@ async function saveInvoiceEdit(){
     loc.batch.total = loc.batch.total - oldTotal + total;
   }
 
-  addMovement('تعديل فاتورة', `تم تعديل الفاتورة رقم ${loc.sale.id} — المجموع تغير من ${oldTotal.toFixed(2)} إلى ${total.toFixed(2)} د.م${stockChanges.length?' (تغييرات المخزون: '+stockChanges.join('، ')+')':''}`);
+  addMovement(editingIsQuote ? 'تعديل تسعيرة' : 'تعديل فاتورة', `تم تعديل ${editingIsQuote?'التسعيرة':'الفاتورة'} رقم ${loc.sale.id} — المجموع تغير من ${oldTotal.toFixed(2)} إلى ${total.toFixed(2)} د.م${stockChanges.length?' (تغييرات المخزون: '+stockChanges.join('، ')+')':''}`);
 
-  await persistProducts();
-  await persistArchive();
+  if(!editingIsQuote) await persistProducts();
+  if(loc.type==='quote') await persistQuotes();
+  else await persistArchive();
   closeInvoiceEdit();
   renderAdmin();
   renderProducts();
-  showToast('تم حفظ تعديلات الفاتورة');
+  showToast(editingIsQuote ? 'تم حفظ تعديلات التسعيرة' : 'تم حفظ تعديلات الفاتورة');
 }
 
 /* ===== Admin ===== */
@@ -1623,7 +1675,7 @@ function showAdminSub(view){
 async function resetAccountsToZero(){
   if(sales.length===0){ showToast('لا توجد بيانات مبيعات للتصفير حاليا'); return; }
   const total = sales.reduce((s,x)=>s+x.total,0);
-  const ok = confirm(`واش متأكد من تصفير الحسابات؟\nغادي يتصفر عدد المبيعات والمجموع في لوحة الإدارة (${sales.length} عملية بقيمة ${total.toFixed(2)} د.م)، لكن هاذ البيانات غادي تتحفظ فـ"أرشيف الحسابات المصفرة" ومغاديش تضيع.`);
+  const ok = confirm(`واش متأكد من تصفير الحسابات؟\nغادي يتصفر عدد المبيعات والمجموع في لوحة الإدارة (${sales.length} عملية بقيمة ${total.toFixed(2)} د.م)، لكن هاذ البيانات غادي تتحفظ فـ"أرشيف الحسابات المصفرة" ومغاديش تضيع. (التسعيرات ماكتأثرش بهاذ العملية وكتبقى فسجلها الخاص).`);
   if(!ok) return;
 
   const batch = {
@@ -1749,6 +1801,7 @@ function renderAdmin(){
     <div class="stat-card" style="border-color:#C0392B;cursor:pointer;" onclick="showAdminSub('stock')"><div class="num nums">${lowStock.length}</div><div class="lbl">تنبيهات المخزون (اضغط للتفاصيل)</div></div>
     <div class="stat-card"><div class="num nums">${sales.length}</div><div class="lbl">عدد عمليات البيع</div></div>
     <div class="stat-card"><div class="num nums">${totalRevenue.toFixed(2)}</div><div class="lbl">إجمالي المبيعات (د.م)</div></div>
+    <div class="stat-card" style="border-color:var(--ink-soft);"><div class="num nums">${quotes.length}</div><div class="lbl">عدد التسعيرات المحفوظة</div></div>
   `;
 
   // badge on the sub-tab button that opens the separate low-stock page
@@ -1862,10 +1915,13 @@ function renderAdmin(){
     'إضافة منتوج': 'color:var(--green-ok);font-weight:700;',
     'تعديل المخزون': 'color:var(--gold);font-weight:700;',
     'بيع': 'color:var(--ink-soft);font-weight:700;',
+    'تسعيرة': 'color:var(--ink-soft);font-weight:700;',
     'حذف منتج': 'color:var(--wine-deep);font-weight:700;',
     'تصفير الحسابات': 'color:var(--wine-deep);font-weight:700;',
     'حذف فاتورة': 'color:var(--wine-deep);font-weight:700;',
-    'تعديل فاتورة': 'color:var(--gold);font-weight:700;'
+    'حذف تسعيرة': 'color:var(--wine-deep);font-weight:700;',
+    'تعديل فاتورة': 'color:var(--gold);font-weight:700;',
+    'تعديل تسعيرة': 'color:var(--gold);font-weight:700;'
   };
   document.getElementById('movementsTable').innerHTML = `
     <thead><tr><th>النوع</th><th>التفاصيل</th><th>التاريخ</th></tr></thead>
