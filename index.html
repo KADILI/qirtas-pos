@@ -75,6 +75,26 @@
     display:flex; align-items:center; gap:8px; background:var(--ink); border-radius:9px;
     padding:10px 14px; margin-bottom:10px;
   }
+  /* ===== Product-side finder toolbar (redesigned) =====
+     scan + search now share one row instead of stacking as two separate full-width
+     rows, so the category chips and product grid start higher up the screen. */
+  .finder-row{ display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .finder-row .scan-row{ flex:1 1 260px; margin-bottom:0; }
+  .finder-row .search-wrap{ flex:1 1 220px; position:relative; display:flex; align-items:center; }
+  .finder-row .search-wrap input{
+    width:100%; padding:11px 38px 11px 14px; border-radius:9px; border:1px solid var(--paper-deep);
+    font-family:'Tajawal'; font-size:15px;
+  }
+  .finder-row .search-wrap .search-icon{ position:absolute; right:12px; font-size:14px; color:var(--ink-soft); pointer-events:none; }
+  .finder-row .search-wrap .search-clear{
+    position:absolute; left:8px; background:var(--paper); border:none; color:var(--ink-soft);
+    width:22px; height:22px; border-radius:50%; cursor:pointer; font-size:13px; display:none; line-height:1;
+  }
+  .finder-row .search-wrap.has-text .search-clear{ display:block; }
+  .product-toolbar{ padding-bottom:10px; border-bottom:1px solid var(--paper-deep); margin-bottom:12px; }
+  .product-toolbar .results-count{ margin-bottom:0; }
+  .results-count{ font-size:12.5px; color:var(--ink-soft); margin:0 0 8px; padding:0 2px; }
+  .results-count b{ color:var(--ink); }
   .scan-row .scan-icon{ font-size:18px; }
   .scan-row input{
     flex:1; background:transparent; border:none; color:var(--paper); font-family:'IBM Plex Sans Arabic';
@@ -222,21 +242,52 @@
   th{ background:var(--paper-deep); font-weight:700; }
   .icon-del{ background:none; border:none; cursor:pointer; font-size:15px; color:var(--wine-deep); }
 
-  /* Admin sub-navigation: separates "التقارير" from "تنبيهات المخزون" */
-  .admin-subtabs{ display:flex; gap:8px; flex-wrap:wrap; }
-  .admin-subtab-btn{
-    border:2px solid var(--paper-deep); background:#fff; color:var(--ink);
-    border-radius:9px; padding:9px 16px; font-family:'Tajawal'; font-weight:700;
-    font-size:14px; cursor:pointer; display:flex; align-items:center; gap:6px;
+  /* ===== Admin sidebar navigation ===== */
+  /* replaces the old horizontal sub-tabs: each admin section now lives on its own
+     screen, reachable from a fixed side menu, so the page is never one long scroll */
+  .admin-shell{ flex:1; display:flex; min-height:0; }
+  .admin-sidebar{
+    width:230px; flex:0 0 230px; background:var(--panel); border-left:1px solid var(--paper-deep);
+    display:flex; flex-direction:column; overflow-y:auto;
   }
-  .admin-subtab-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
-  .admin-subtab-btn .badge-count{
+  .admin-sidebar-head{ padding:16px 16px 10px; }
+  .admin-sidebar-head h2{ margin:0; font-size:19px; }
+  .admin-sidebar-head p{ margin:2px 0 0; font-size:12px; color:var(--ink-soft); }
+  .admin-nav{ display:flex; flex-direction:column; gap:2px; padding:6px 10px 16px; }
+  .admin-nav-group-label{
+    font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase;
+    letter-spacing:.03em; padding:12px 10px 4px;
+  }
+  .admin-nav-btn{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    border:none; background:transparent; color:var(--ink); text-align:right;
+    border-radius:9px; padding:10px 12px; font-family:'Tajawal'; font-weight:700;
+    font-size:14px; cursor:pointer; width:100%;
+  }
+  .admin-nav-btn:hover{ background:var(--paper); }
+  .admin-nav-btn.active{ background:var(--ink); color:var(--paper); }
+  .admin-nav-btn .anb-label{ display:flex; align-items:center; gap:8px; }
+  .admin-nav-btn .badge-count{
     background:var(--wine-deep); color:#fff; border-radius:20px; font-size:11px;
     padding:1px 7px; font-family:'IBM Plex Sans Arabic';
   }
+  .admin-nav-btn.active .badge-count{ background:var(--gold); color:var(--ink); }
+  .admin-nav-sep{ height:1px; background:var(--paper-deep); margin:10px 4px; }
+  .admin-content-scroll{ flex:1; overflow-y:auto; padding:20px 24px; min-width:0; }
+  .admin-page-head{ margin-bottom:16px; }
+  .admin-page-head h2{ margin:0 0 4px; }
+  .admin-page-head p{ margin:0; color:var(--ink-soft); font-size:14px; }
   .stock-page-head{ text-align:center; margin-bottom:18px; }
   .stock-page-head h2{ margin:0 0 4px; }
   .stock-page-head p{ margin:0; color:var(--ink-soft); font-size:14px; }
+  @media (max-width: 980px){
+    .admin-shell{ flex-direction:column; }
+    .admin-sidebar{ width:100%; flex-basis:auto; border-left:none; border-bottom:1px solid var(--paper-deep); }
+    .admin-nav{ flex-direction:row; flex-wrap:wrap; padding:10px; }
+    .admin-nav-group-label{ display:none; }
+    .admin-nav-sep{ display:none; }
+    .admin-nav-btn{ width:auto; }
+  }
 
   /* Discount inputs */
   .line-discount-row{ display:flex; align-items:center; gap:4px; margin-top:4px; }
@@ -359,14 +410,22 @@
 
   <div class="main-split" id="posTab">
     <div class="product-side">
-      <div class="scan-row">
-        <span class="scan-icon">📷</span>
-        <input type="text" id="barcodeInput" placeholder="امسح الباركود أو اكتبه ثم اضغط Enter..." autofocus>
-        <span class="scan-hint">يعمل مع قارئ الباركود USB</span>
+      <div class="product-toolbar">
+        <div class="finder-row">
+          <div class="scan-row">
+            <span class="scan-icon">📷</span>
+            <input type="text" id="barcodeInput" placeholder="امسح الباركود أو اكتبه ثم اضغط Enter..." title="يعمل مع قارئ الباركود USB" autofocus>
+          </div>
+          <div class="search-wrap" id="searchWrap">
+            <input type="text" id="searchInput" placeholder="ابحث عن منتوج بالاسم أو الباركود...">
+            <span class="search-icon">🔍</span>
+            <button type="button" class="search-clear" id="searchClearBtn" onclick="clearProductSearch()">✕</button>
+          </div>
+        </div>
+        <div class="cat-row" id="categoryRow"></div>
+        <div class="cat-row" id="bookFilterRow" style="display:none;"></div>
+        <div class="results-count" id="resultsCount"></div>
       </div>
-      <div class="cat-row" id="categoryRow"></div>
-      <div class="cat-row" id="bookFilterRow" style="display:none;"></div>
-      <div class="search-row"><input type="text" id="searchInput" placeholder="ابحث عن منتوج بالاسم أو الباركود..."></div>
       <div class="product-scroll"><div class="pgrid" id="productGrid"></div></div>
     </div>
 
@@ -399,34 +458,48 @@
   </div>
 
   <div class="main-split" id="adminTab" style="display:none;">
-    <div class="admin-scroll" style="width:100%;">
-      <div id="adminPanel" style="display:block;">
-        <div class="section-head">
-          <h2 style="margin:0;">لوحة الإدارة</h2>
-          <div class="admin-subtabs">
-            <button class="admin-subtab-btn active" id="adminSubReportsBtn" onclick="showAdminSub('reports')">📊 التقارير</button>
-            <button class="admin-subtab-btn" id="adminSubStockBtn" onclick="showAdminSub('stock')">⚠️ تنبيهات المخزون <span class="badge-count" id="stockBadgeCount">0</span></button>
-            <button class="admin-subtab-btn" id="adminSubOrdersBtn" onclick="showAdminSub('orders')">📝 الطلبيات <span class="badge-count" id="ordersBadgeCount">0</span></button>
-          </div>
-        </div>
+    <div class="admin-shell">
 
-        <!-- ===== صفحة التقارير (بدون قائمة المنتوجات الناقصة) ===== -->
-        <div id="adminReportsView">
+      <!-- ===== القائمة الجانبية: كل قسم من الإدارة فبلاصتو، ماشي مكوم فسكرول واحد ===== -->
+      <div class="admin-sidebar">
+        <div class="admin-sidebar-head">
+          <h2>⚙️ الإدارة</h2>
+          <p>اختار القسم لي بغيتي</p>
+        </div>
+        <nav class="admin-nav" id="adminNav">
+          <div class="admin-nav-group-label">التقارير</div>
+          <button class="admin-nav-btn active" data-view="overview" onclick="showAdminSub('overview')"><span class="anb-label">📊 نظرة عامة</span></button>
+          <button class="admin-nav-btn" data-view="sales" onclick="showAdminSub('sales')"><span class="anb-label">🧾 سجل المبيعات</span></button>
+          <button class="admin-nav-btn" data-view="invoices" onclick="showAdminSub('invoices')"><span class="anb-label">📄 سجل الفواتير</span></button>
+          <button class="admin-nav-btn" data-view="byuser" onclick="showAdminSub('byuser')"><span class="anb-label">👤 المبيعات حسب المستخدم</span></button>
+          <button class="admin-nav-btn" data-view="movements" onclick="showAdminSub('movements')"><span class="anb-label">📜 سجل الحركة</span></button>
+          <button class="admin-nav-btn" data-view="archive" onclick="showAdminSub('archive')"><span class="anb-label">📦 الأرشيف</span></button>
+
+          <div class="admin-nav-group-label">الإدارة</div>
+          <button class="admin-nav-btn" data-view="products" onclick="showAdminSub('products')"><span class="anb-label">🗂️ المنتوجات</span></button>
+          <button class="admin-nav-btn" data-view="users" onclick="showAdminSub('users')"><span class="anb-label">👥 المستخدمون</span></button>
+
+          <div class="admin-nav-sep"></div>
+          <button class="admin-nav-btn" data-view="stock" onclick="showAdminSub('stock')"><span class="anb-label">⚠️ تنبيهات المخزون</span><span class="badge-count" id="stockBadgeCount">0</span></button>
+          <button class="admin-nav-btn" data-view="orders" onclick="showAdminSub('orders')"><span class="anb-label">📝 الطلبيات</span><span class="badge-count" id="ordersBadgeCount">0</span></button>
+        </nav>
+      </div>
+
+      <!-- ===== محتوى الصفحة المختارة ===== -->
+      <div class="admin-content-scroll">
+
+        <!-- نظرة عامة -->
+        <div id="adminOverviewView">
           <div class="section-head">
-            <h3 style="margin:0;">نظرة عامة</h3>
+            <h2 style="margin:0;">📊 نظرة عامة</h2>
             <button class="btn btn-danger-outline" style="width:auto;margin:0;" onclick="resetAccountsToZero()">🔄 تصفير الحسابات</button>
           </div>
           <div class="stat-grid" id="statGrid"></div>
+        </div>
 
-          <div class="section-head">
-            <h3 style="margin:0;">إدارة المستخدمين (اليوزر والكود ديال كل جهاز)</h3>
-            <button class="btn btn-gold" onclick="openUserForm()">+ إضافة مستخدم</button>
-          </div>
-          <div class="table-wrap"><table id="usersTable"></table></div>
-
-          <div class="section-head">
-            <h3 style="margin:0;">سجل المبيعات</h3>
-          </div>
+        <!-- سجل المبيعات -->
+        <div id="adminSalesView" style="display:none;">
+          <div class="admin-page-head"><h2>🧾 سجل المبيعات</h2></div>
           <div class="date-range-bar">
             <div class="drb-field">
               <label>من تاريخ</label>
@@ -446,52 +519,73 @@
           </div>
           <div class="stat-grid" id="periodStatGrid" style="margin-bottom:14px;"></div>
           <div class="table-wrap"><table id="salesTable"></table></div>
+        </div>
 
-          <div class="section-head">
-            <h3 style="margin:0;">🧾 سجل الفواتير (كل فاتورة بمفردها)</h3>
+        <!-- سجل الفواتير -->
+        <div id="adminInvoicesView" style="display:none;">
+          <div class="admin-page-head">
+            <h2>📄 سجل الفواتير</h2>
+            <p>هنا كتلقى كل فاتورة ديرت من أي وقت، وحدة وحدة برقمها، سواء كانت فـ"سجل المبيعات" الحالي أو تصفرات من قبل ودخلات للأرشيف، وكذلك التسعيرات (بدون بيع). أي فاتورة أو تسعيرة تقدر تعاود تشوفها وتطبعها أو تعدلها أو تحذفها فأي وقت.</p>
           </div>
-          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">هنا كتلقى كل فاتورة ديرت من أي وقت، وحدة وحدة برقمها، سواء كانت فـ"سجل المبيعات" الحالي أو تصفرات من قبل ودخلات للأرشيف، وكذلك التسعيرات (بدون بيع). أي فاتورة أو تسعيرة تقدر تعاود تشوفها وتطبعها أو تعدلها أو تحذفها فأي وقت.</p>
           <div class="search-row" style="margin-bottom:10px;">
             <input type="text" id="invoiceSearch" placeholder="🔍 ابحث برقم الفاتورة أو اسم الكاشير..." oninput="renderInvoicesTable()">
           </div>
           <div class="table-wrap"><table id="invoicesTable"></table></div>
+        </div>
 
+        <!-- المبيعات حسب المستخدم -->
+        <div id="adminByUserView" style="display:none;">
+          <div class="admin-page-head"><h2>👤 المبيعات حسب المستخدم</h2></div>
+          <div class="table-wrap"><table id="salesByUserTable"></table></div>
+        </div>
+
+        <!-- سجل الحركة -->
+        <div id="adminMovementsView" style="display:none;">
+          <div class="admin-page-head"><h2>📜 سجل الحركة</h2></div>
+          <div class="table-wrap"><table id="movementsTable"></table></div>
+        </div>
+
+        <!-- الأرشيف -->
+        <div id="adminArchiveView" style="display:none;">
+          <div class="admin-page-head">
+            <h2>📦 أرشيف الحسابات المصفرة</h2>
+            <p>هنا كتبقى محفوظة كل المبيعات القديمة كل مرة تدير فيها "تصفير الحسابات"، باش ماتضيعش البيانات.</p>
+          </div>
+          <div id="archiveWrap"></div>
+        </div>
+
+        <!-- المنتوجات -->
+        <div id="adminProductsView" style="display:none;">
           <div class="section-head">
-            <h3 style="margin:0;">إدارة المنتوجات</h3>
+            <h2 style="margin:0;">🗂️ إدارة المنتوجات</h2>
             <button class="btn btn-gold" onclick="openProductForm()">+ إضافة منتوج</button>
           </div>
           <div class="search-row" style="margin-bottom:10px;">
             <input type="text" id="adminProductSearch" placeholder="🔍 ابحث بالباركود أو باسم المنتوج للعثور عليه أو إضافته بسهولة..." oninput="renderAdmin()">
           </div>
           <div class="table-wrap"><table id="productsTable"></table></div>
-
-          <div class="section-head">
-            <h3 style="margin:0;">المبيعات حسب المستخدم</h3>
-          </div>
-          <div class="table-wrap"><table id="salesByUserTable"></table></div>
-
-          <div class="section-head">
-            <h3 style="margin:0;">سجل الحركة</h3>
-          </div>
-          <div class="table-wrap"><table id="movementsTable"></table></div>
-
-          <div class="section-head">
-            <h3 style="margin:0;">📦 أرشيف الحسابات المصفرة</h3>
-          </div>
-          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">هنا كتبقى محفوظة كل المبيعات القديمة كل مرة تدير فيها "تصفير الحسابات"، باش ماتضيعش البيانات.</p>
-          <div id="archiveWrap"></div>
         </div>
 
-        <!-- ===== صفحة منفصلة: تنبيهات المخزون (منتوجات في طريقها للنفاد) ===== -->
+        <!-- المستخدمون -->
+        <div id="adminUsersView" style="display:none;">
+          <div class="section-head">
+            <h2 style="margin:0;">👥 إدارة المستخدمين</h2>
+            <button class="btn btn-gold" onclick="openUserForm()">+ إضافة مستخدم</button>
+          </div>
+          <p style="color:var(--ink-soft);font-size:13px;margin:-4px 0 10px;">اليوزر والكود ديال كل جهاز</p>
+          <div class="table-wrap"><table id="usersTable"></table></div>
+        </div>
+
+        <!-- تنبيهات المخزون -->
         <div id="adminStockView" style="display:none;">
           <div class="stock-page-head">
             <h2>⚠️ المنتوجات في طريقها للنفاد</h2>
-            <p>هذه لائحة منفصلة عن صفحة التقارير، تجمع كل المنتوجات التي وصلت أو اقتربت من حد التنبيه المحدد لها</p>
+            <p>لائحة تجمع كل المنتوجات التي وصلت أو اقتربت من حد التنبيه المحدد لها</p>
           </div>
           <div id="lowStockAlertWrap"></div>
         </div>
 
-        <!-- ===== صفحة منفصلة: الطلبيات (لائحة أشياء خاص نتقدا / نشريو) ===== -->
+        <!-- الطلبيات -->
         <div id="adminOrdersView" style="display:none;">
           <div class="stock-page-head">
             <h2>📝 الطلبيات</h2>
@@ -503,6 +597,7 @@
           </div>
           <div id="ordersListWrap"></div>
         </div>
+
       </div>
     </div>
   </div>
@@ -719,7 +814,7 @@ let bookSchoolFilter = "الكل"; // active filter for "نوع المدرسة" 
 let bookLevelFilter = "الكل";  // active filter for "المستوى الدراسي" — only relevant when activeCategory === "كتب"
 let isAdmin = false;
 let lastReceiptData = null;
-let adminSubView = 'reports'; // 'reports' | 'stock' | 'orders' — controls which admin sub-page is visible
+let adminSubView = 'overview'; // controls which admin sidebar page is visible: overview | sales | invoices | byuser | movements | archive | products | users | stock | orders
 
 // ترتيب عرض الفئات فجدول "إدارة المنتوجات": كل فئة فمجموعة بحالها
 const PRODUCT_CATEGORY_ORDER = ["كتب","أقلام","أدوات مكتبية","قرطاسية"];
@@ -1001,6 +1096,13 @@ function renderProducts(){
     }
     return matchCat && matchSearch && matchBookFilters;
   });
+  const countEl = document.getElementById('resultsCount');
+  if(countEl){
+    const totalInCat = activeCategory==="الكل" ? products.length : products.filter(p=>p.category===activeCategory).length;
+    countEl.innerHTML = searchTerm.trim()
+      ? `<b>${list.length}</b> نتيجة على "${searchTerm.trim()}"`
+      : `<b>${totalInCat}</b> منتوج${activeCategory!=="الكل" ? ' في هذه الفئة' : ''}`;
+  }
   if(list.length===0){
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--ink-soft);padding:40px;">لا توجد منتوجات</div>`;
     return;
@@ -1016,7 +1118,19 @@ function renderProducts(){
     </button>
   `).join('');
 }
-document.getElementById('searchInput').addEventListener('input', e=>{ searchTerm=e.target.value; renderProducts(); });
+function clearProductSearch(){
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  searchTerm = '';
+  document.getElementById('searchWrap').classList.remove('has-text');
+  renderProducts();
+  input.focus();
+}
+document.getElementById('searchInput').addEventListener('input', e=>{
+  searchTerm=e.target.value;
+  document.getElementById('searchWrap').classList.toggle('has-text', searchTerm.length>0);
+  renderProducts();
+});
 
 /* ===== Barcode scan (works with keyboard-wedge USB scanners) ===== */
 const barcodeInput = document.getElementById('barcodeInput');
@@ -1893,16 +2007,19 @@ async function saveInvoiceEdit(){
 
 /* ===== Admin ===== */
 
-// switches between the reports sub-page, the low-stock alerts sub-page, and the
-// orders (طلبيات) sub-page, so each stays on its own separate screen
+// switches between the admin sidebar pages (نظرة عامة، سجل المبيعات، سجل الفواتير،
+// المبيعات حسب المستخدم، سجل الحركة، الأرشيف، المنتوجات، المستخدمون، تنبيهات المخزون، الطلبيات)
+// so each section lives on its own separate screen instead of one long page
+const ADMIN_VIEWS = ['overview','sales','invoices','byuser','movements','archive','products','users','stock','orders'];
 function showAdminSub(view){
   adminSubView = view;
-  document.getElementById('adminReportsView').style.display = view==='reports' ? 'block' : 'none';
-  document.getElementById('adminStockView').style.display = view==='stock' ? 'block' : 'none';
-  document.getElementById('adminOrdersView').style.display = view==='orders' ? 'block' : 'none';
-  document.getElementById('adminSubReportsBtn').classList.toggle('active', view==='reports');
-  document.getElementById('adminSubStockBtn').classList.toggle('active', view==='stock');
-  document.getElementById('adminSubOrdersBtn').classList.toggle('active', view==='orders');
+  ADMIN_VIEWS.forEach(v=>{
+    const el = document.getElementById('admin'+v.charAt(0).toUpperCase()+v.slice(1)+'View');
+    if(el) el.style.display = (v===view) ? 'block' : 'none';
+  });
+  document.querySelectorAll('#adminNav .admin-nav-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.view===view);
+  });
   if(view==='orders') renderOrdersList();
 }
 
