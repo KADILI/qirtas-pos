@@ -223,7 +223,7 @@
   .icon-del{ background:none; border:none; cursor:pointer; font-size:15px; color:var(--wine-deep); }
 
   /* Admin sub-navigation: separates "التقارير" from "تنبيهات المخزون" */
-  .admin-subtabs{ display:flex; gap:8px; }
+  .admin-subtabs{ display:flex; gap:8px; flex-wrap:wrap; }
   .admin-subtab-btn{
     border:2px solid var(--paper-deep); background:#fff; color:var(--ink);
     border-radius:9px; padding:9px 16px; font-family:'Tajawal'; font-weight:700;
@@ -281,6 +281,27 @@
   .toast{ position:fixed; bottom:22px; left:22px; background:var(--ink); color:var(--paper); padding:13px 20px; border-radius:10px; box-shadow:var(--shadow); z-index:200; display:none; font-size:14px; font-weight:700; }
   .toast.show{ display:block; animation: fadein .2s ease; }
   @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  /* Add-product-to-invoice/quote picker (inside edit modal) */
+  .ie-add-product-wrap{ margin-bottom:12px; }
+  .ie-add-results{ max-height:180px; overflow-y:auto; margin-top:6px; border:1px solid var(--paper-deep); border-radius:8px; background:#fff; display:none; }
+  .ie-add-results.show{ display:block; }
+  .ie-add-result-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #F0ECE0; cursor:pointer; }
+  .ie-add-result-row:last-child{ border-bottom:none; }
+  .ie-add-result-row:hover{ background:var(--paper); }
+  .ie-add-result-row .ie-ar-name{ font-weight:700; font-size:13px; }
+  .ie-add-result-row .ie-ar-meta{ font-size:11.5px; color:var(--ink-soft); }
+  .ie-convert-row{ margin-top:10px; }
+
+  /* Orders / restock-list page */
+  .orders-toolbar{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .order-note-card{ background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:10px; border-right:5px solid var(--wine); }
+  .order-note-card .onc-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
+  .order-note-card .onc-title{ font-weight:700; font-size:15px; }
+  .order-note-card .onc-date{ font-size:11.5px; color:var(--ink-soft); white-space:nowrap; }
+  .order-note-card .onc-text{ font-size:13.5px; white-space:pre-wrap; line-height:1.6; color:var(--ink); }
+  .order-note-card .onc-actions{ display:flex; gap:8px; margin-top:10px; }
+  .orders-empty{ text-align:center; color:var(--ink-soft); padding:40px 10px; }
 
   @media print{
     @page{ size:A4; margin:14mm; }
@@ -385,6 +406,7 @@
           <div class="admin-subtabs">
             <button class="admin-subtab-btn active" id="adminSubReportsBtn" onclick="showAdminSub('reports')">📊 التقارير</button>
             <button class="admin-subtab-btn" id="adminSubStockBtn" onclick="showAdminSub('stock')">⚠️ تنبيهات المخزون <span class="badge-count" id="stockBadgeCount">0</span></button>
+            <button class="admin-subtab-btn" id="adminSubOrdersBtn" onclick="showAdminSub('orders')">📝 الطلبيات <span class="badge-count" id="ordersBadgeCount">0</span></button>
           </div>
         </div>
 
@@ -468,6 +490,19 @@
           </div>
           <div id="lowStockAlertWrap"></div>
         </div>
+
+        <!-- ===== صفحة منفصلة: الطلبيات (لائحة أشياء خاص نتقدا / نشريو) ===== -->
+        <div id="adminOrdersView" style="display:none;">
+          <div class="stock-page-head">
+            <h2>📝 الطلبيات</h2>
+            <p>هنا تقدر تكتب لائحة بالمنتوجات أو الأشياء اللي خاصك تتقدا (تشريها) لتجديد المخزون، وتحتفظ بها أو تنزلها كملف</p>
+          </div>
+          <div class="orders-toolbar">
+            <button class="btn btn-gold" onclick="openOrderNoteForm()">+ إضافة طلبية جديدة</button>
+            <button class="btn btn-outline" onclick="downloadAllOrders()">⬇️ تنزيل كل الطلبيات</button>
+          </div>
+          <div id="ordersListWrap"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -543,6 +578,23 @@
   </div>
 </div>
 
+<!-- Order Note (طلبية) Form Modal -->
+<div class="overlay" id="orderNoteFormOverlay">
+  <div class="modal-box">
+    <div class="drawer-head">
+      <h2 id="orderNoteFormTitle" style="margin:0;">إضافة طلبية</h2>
+      <button class="close-x" onclick="toggleOrderNoteForm(false)">✕</button>
+    </div>
+    <input type="hidden" id="onId">
+    <div class="field"><label>عنوان الطلبية (اختياري)</label><input type="text" id="onTitle" placeholder="مثال: طلبية عند المورد فلان"></div>
+    <div class="field">
+      <label>اش خاصك تتقدا</label>
+      <textarea id="onText" rows="7" placeholder="اكتب هنا لائحة المنتوجات أو الأشياء اللي خاصك تشريها..." style="padding:10px 12px;border-radius:8px;border:1px solid var(--paper-deep);font-family:'Tajawal';font-size:15px;resize:vertical;"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="saveOrderNote()">حفظ الطلبية</button>
+  </div>
+</div>
+
 <!-- Invoice Edit Modal -->
 <div class="overlay" id="invoiceEditOverlay">
   <div class="modal-box" style="width:min(560px,94vw);">
@@ -554,6 +606,13 @@
       <div class="field"><label>اسم العميل</label><input type="text" id="ieCustomerName" placeholder="اسم العميل (اختياري)"></div>
       <div class="field"><label>رقم الهاتف</label><input type="text" id="ieCustomerPhone" class="nums" placeholder="رقم الهاتف (اختياري)"></div>
     </div>
+
+    <div class="ie-add-product-wrap">
+      <button type="button" class="btn btn-outline" style="width:100%;" onclick="toggleIeAddProduct()">➕ إضافة منتوج جديد</button>
+      <input type="text" id="ieAddProductSearch" placeholder="ابحث بالاسم أو الباركود..." style="display:none;margin-top:8px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--paper-deep);font-family:'Tajawal';font-size:14px;" oninput="renderIeAddResults()">
+      <div class="ie-add-results" id="ieAddResults"></div>
+    </div>
+
     <div id="ieItemsList"></div>
     <div class="overall-discount-row" style="margin-top:10px;">
       <label for="ieOverallDiscount">نسبة تخفيض على المجموع</label>
@@ -562,6 +621,9 @@
     <div class="sum-row"><span>المجموع الفرعي</span><span class="nums" id="ieSubtotal">0 د.م</span></div>
     <div class="sum-row total"><span>المجموع النهائي</span><span class="nums" id="ieTotal">0 د.م</span></div>
     <button class="btn btn-primary" onclick="saveInvoiceEdit()">حفظ التعديلات</button>
+    <div class="ie-convert-row" id="ieConvertRow" style="display:none;">
+      <button class="btn btn-gold" style="width:100%;" onclick="convertQuoteToSale()">✅ تحويل هذه التسعيرة إلى بيع نهائي</button>
+    </div>
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;" id="ieStockNote">ملاحظة: تعديل الكمية غادي يأثر على المخزون تلقائيا (زيادة الكمية كتنقص من المخزون، ونقصانها أو حذف المنتوج كيرجع الكمية للمخزون).</p>
   </div>
 </div>
@@ -646,6 +708,7 @@ let quotes = []; // تسعيرات محفوظة (بدون بيع) — كتبقى
 let archivedSales = []; // batches of sales tucked away here whenever "تصفير الحسابات" is used, so nothing is lost
 let movements = [];
 let users = [];
+let orderNotes = []; // لائحة "الطلبيات" — ملاحظات حرة بأشياء خاص نتقدا (نشريو) لتجديد المخزون
 let currentUser = null;
 let order = {}; // {productId: qty}
 let orderDiscount = {}; // {productId: percent 0-100} discount applied per product line
@@ -656,7 +719,7 @@ let bookSchoolFilter = "الكل"; // active filter for "نوع المدرسة" 
 let bookLevelFilter = "الكل";  // active filter for "المستوى الدراسي" — only relevant when activeCategory === "كتب"
 let isAdmin = false;
 let lastReceiptData = null;
-let adminSubView = 'reports'; // 'reports' | 'stock' — controls which admin sub-page is visible
+let adminSubView = 'reports'; // 'reports' | 'stock' | 'orders' — controls which admin sub-page is visible
 
 // ترتيب عرض الفئات فجدول "إدارة المنتوجات": كل فئة فمجموعة بحالها
 const PRODUCT_CATEGORY_ORDER = ["كتب","أقلام","أدوات مكتبية","قرطاسية"];
@@ -744,6 +807,7 @@ async function loadData(){
       archivedSales = data.archivedSales || [];
       movements = data.movements || [];
       users = (data.users && data.users.length) ? data.users : defaultUsers;
+      orderNotes = data.orderNotes || [];
       if(!data.users || !data.users.length){
         await setDoc(storeRef, {users}, {merge:true});
       }
@@ -754,7 +818,8 @@ async function loadData(){
       archivedSales = [];
       movements = [];
       users = defaultUsers;
-      await setDoc(storeRef, {products, sales, quotes, archivedSales, movements, users});
+      orderNotes = [];
+      await setDoc(storeRef, {products, sales, quotes, archivedSales, movements, users, orderNotes});
     }
   }catch(e){
     console.error(e);
@@ -762,6 +827,7 @@ async function loadData(){
     sales = [];
     quotes = [];
     users = defaultUsers;
+    orderNotes = [];
     const statusEl = document.getElementById('syncStatus');
     statusEl.textContent = '⚠️ تحقق من إعدادات Firebase';
     statusEl.classList.add('offline');
@@ -787,6 +853,7 @@ function listenRealtime(){
     if(data.archivedSales) archivedSales = data.archivedSales;
     if(data.movements) movements = data.movements;
     if(data.users && data.users.length) users = data.users;
+    if(data.orderNotes) orderNotes = data.orderNotes;
     renderProducts();
     renderOrder();
     if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
@@ -826,6 +893,17 @@ async function persistArchive(){
   const { setDoc, storeRef } = window.__fb;
   try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); }
   catch(e){ showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); }
+}
+async function persistOrderNotes(){
+  const { setDoc, storeRef } = window.__fb;
+  try{ await setDoc(storeRef, {orderNotes}, {merge:true}); }
+  catch(e){ showToast('تعذر حفظ الطلبية — تحقق من إعدادات Firebase'); }
+}
+// used when converting a quote to a final sale: touches products, sales AND quotes together
+async function persistConvert(){
+  const { setDoc, storeRef } = window.__fb;
+  try{ await setDoc(storeRef, {products, sales, quotes, movements}, {merge:true}); }
+  catch(e){ showToast('تعذر حفظ التحويل — تحقق من إعدادات Firebase'); }
 }
 function addMovement(type, description){
   movements.unshift({
@@ -1176,7 +1254,7 @@ function showQuote(quote, isReprint){
       <div class="inv-summary">
         <div class="inv-summary-row"><span>المجموع الفرعي</span><span class="nums">${(+quote.subtotal).toFixed(2)} د.م</span></div>
         ${overallDisc>0 ? `<div class="inv-summary-row discount"><span>خصم على المجموع (${overallDisc}%)</span><span class="nums">- ${(quote.subtotal-quote.total).toFixed(2)} د.م</span></div>` : ''}
-        <div class="inv-summary-total"><span>المجموع التقديري</span><span class="nums">${(+quote.total).toFixed(2)} د.م</span></div>
+        <div class="inv-summary-total"><span>المجموع النهائي</span><span class="nums">${(+quote.total).toFixed(2)} د.م</span></div>
       </div>
       <div class="inv-note">⚠️ هذه تسعيرة تقديرية فقط وليست فاتورة بيع، والأسعار قابلة للتغيير</div>
       <div class="inv-footer">مكتبة منار — شكرا لثقتكم 🌿</div>
@@ -1397,6 +1475,7 @@ function renderInvoicesTable(){
           <td style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="viewInvoice('${s.id}')">🧾 عرض</button>
             <button class="btn btn-outline" style="padding:6px 10px;white-space:nowrap;" onclick="openInvoiceEdit('${s.id}')">✏️ تعديل</button>
+            ${s.docType==='quote' ? `<button class="btn btn-gold" style="padding:6px 10px;white-space:nowrap;" onclick="quickConvertQuote('${s.id}')">✅ تحويل لبيع</button>` : ''}
             <button class="icon-del" onclick="deleteInvoice('${s.id}')">🗑️</button>
           </td>
         </tr>`).join('')}
@@ -1508,6 +1587,92 @@ async function deleteInvoice(id){
   showToast(isQuote ? 'تم حذف التسعيرة' : 'تم حذف الفاتورة');
 }
 
+// ===== Convert a quote into a final sale =====
+// Takes a saved quote (docType 'quote'), checks stock availability for every item,
+// deducts stock, moves it out of `quotes` and into `sales` as a proper sale record
+// (keeping the same id/date/customer info so it stays traceable), logs the change,
+// and shows the resulting sale receipt.
+async function doConvertQuoteToSale(quote, quoteLoc){
+  // make sure stock still covers every item in the quote (stock may have moved since the quote was made)
+  const shortages = [];
+  quote.items.forEach(it=>{
+    const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
+    if(!p || p.stock < it.qty){
+      shortages.push(`${it.name} (متوفر: ${p?p.stock:0}, مطلوب: ${it.qty})`);
+    }
+  });
+  if(shortages.length>0){
+    showToast('لا يمكن التحويل — المخزون غير كافي لـ: ' + shortages.join('، '));
+    return false;
+  }
+
+  quote.items.forEach(it=>{
+    const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
+    if(p) p.stock -= it.qty;
+  });
+
+  // turn the quote record itself into a sale record, keep its id/date so it stays traceable
+  quote.docType = 'sale';
+  quote.convertedFromQuote = true;
+  quote.date = quote.date; // keep original date; the "sale" now legally happened at conversion time in spirit, but we preserve history
+  quote.convertedAt = new Date().toLocaleString('ar-MA');
+
+  // remove from quotes list, push into sales list
+  if(quoteLoc.type==='quote'){
+    quotes.splice(quoteLoc.index,1);
+  }
+  sales.unshift(quote);
+
+  addMovement('تحويل تسعيرة لبيع', `تم تحويل التسعيرة رقم ${quote.id} إلى بيع نهائي بقيمة ${(+quote.total).toFixed(2)} د.م (${quote.items.length} صنف: ${quote.items.map(i=>i.name+' ×'+i.qty).join('، ')})`);
+
+  await persistConvert();
+  renderProducts();
+  renderAdmin();
+  return true;
+}
+
+// quick one-click convert straight from the invoices table
+async function quickConvertQuote(id){
+  const loc = locateSale(id);
+  if(!loc || (loc.sale.docType!=='quote')){ showToast('هاذ السجل ماشي تسعيرة'); return; }
+  const ok = confirm(`واش متأكد بغيتي تحول التسعيرة رقم ${loc.sale.id} إلى بيع نهائي؟\nغادي تنقص الكمية المطلوبة من المخزون.`);
+  if(!ok) return;
+  const success = await doConvertQuoteToSale(loc.sale, loc);
+  if(success){
+    showToast('✅ تم تحويل التسعيرة إلى بيع نهائي');
+    showReceipt(loc.sale, true);
+  }
+}
+
+// convert button inside the edit-invoice modal (uses the CURRENT edited state:
+// saves the edit first, then converts, so any product added/removed/changed
+// during editing is what actually gets converted and deducted from stock)
+async function convertQuoteToSale(){
+  if(!editingInvoiceId || !editingIsQuote){ return; }
+  if(editingItems.length===0){ showToast('ما يمكنش تحول تسعيرة فارغة لبيع'); return; }
+  const ok = confirm(`واش متأكد بغيتي تحول هاذ التسعيرة إلى بيع نهائي؟\nغادي يتسجل حفظ التعديلات أولا، من بعد غادي تنقص الكميات من المخزون.`);
+  if(!ok) return;
+
+  // apply pending edits (items/discount/customer) onto the quote record first
+  const loc = locateSale(editingInvoiceId);
+  if(!loc){ showToast('تعذر إيجاد التسعيرة'); closeInvoiceEdit(); return; }
+  const subtotal = ieSubtotalCalc();
+  const total = subtotal*(1-editingOverallDiscount/100);
+  loc.sale.items = editingItems.map(it=>({...it, lineTotal: ieLineTotal(it)}));
+  loc.sale.subtotal = subtotal;
+  loc.sale.overallDiscountPercent = editingOverallDiscount;
+  loc.sale.total = total;
+  loc.sale.customerName = document.getElementById('ieCustomerName').value.trim();
+  loc.sale.customerPhone = document.getElementById('ieCustomerPhone').value.trim();
+
+  const success = await doConvertQuoteToSale(loc.sale, loc);
+  if(success){
+    closeInvoiceEdit();
+    showToast('✅ تم تحويل التسعيرة إلى بيع نهائي');
+    showReceipt(loc.sale, true);
+  }
+}
+
 // ===== Invoice/quote edit modal state =====
 let editingInvoiceId = null;
 let editingItems = [];
@@ -1530,6 +1695,12 @@ function openInvoiceEdit(id){
   document.getElementById('ieCustomerName').value = loc.sale.customerName || '';
   document.getElementById('ieCustomerPhone').value = loc.sale.customerPhone || '';
   document.getElementById('ieStockNote').style.display = editingIsQuote ? 'none' : 'block';
+  document.getElementById('ieConvertRow').style.display = editingIsQuote ? 'block' : 'none';
+  // reset the "add product" picker each time the modal opens
+  const addSearch = document.getElementById('ieAddProductSearch');
+  addSearch.style.display = 'none';
+  addSearch.value = '';
+  document.getElementById('ieAddResults').classList.remove('show');
   renderInvoiceEditItems();
   document.getElementById('invoiceEditOverlay').classList.add('show');
 }
@@ -1603,6 +1774,68 @@ function renderInvoiceEditTotals(){
   document.getElementById('ieTotal').textContent = total.toFixed(2)+' د.م';
 }
 
+// ===== Add a NEW product to a quote/invoice while editing it =====
+function toggleIeAddProduct(){
+  const search = document.getElementById('ieAddProductSearch');
+  const results = document.getElementById('ieAddResults');
+  const show = search.style.display === 'none';
+  search.style.display = show ? 'block' : 'none';
+  if(show){
+    search.value = '';
+    search.focus();
+    renderIeAddResults();
+  }else{
+    results.classList.remove('show');
+  }
+}
+function renderIeAddResults(){
+  const term = document.getElementById('ieAddProductSearch').value.trim().toLowerCase();
+  const results = document.getElementById('ieAddResults');
+  let list = products;
+  if(term){
+    list = products.filter(p=> p.name.toLowerCase().includes(term) || (p.barcode||'').includes(term));
+  }
+  list = list.slice(0, 25); // keep the picker light
+  if(list.length===0){
+    results.innerHTML = `<div class="ie-add-result-row" style="cursor:default;color:var(--ink-soft);">لا توجد نتائج</div>`;
+    results.classList.add('show');
+    return;
+  }
+  results.innerHTML = list.map(p=>`
+    <div class="ie-add-result-row" onclick="addProductToEditingInvoice('${p.id}')">
+      <div>
+        <div class="ie-ar-name">${p.icon} ${p.name}</div>
+        <div class="ie-ar-meta nums">${p.price} د.م ${editingIsQuote ? '' : '— المخزون: '+p.stock}</div>
+      </div>
+      <span style="font-size:18px;">➕</span>
+    </div>
+  `).join('');
+  results.classList.add('show');
+}
+// adds the picked product to the currently-edited items list, or bumps its
+// quantity by 1 if it's already there. For a real sale/invoice (not a quote),
+// checks against remaining available stock (product.stock minus what's already
+// reserved for this same product within this edit session) before allowing it.
+function addProductToEditingInvoice(productId){
+  const p = products.find(x=>x.id===productId);
+  if(!p){ showToast('تعذر إيجاد المنتوج'); return; }
+  const existing = editingItems.find(it=> (it.id && it.id===p.id) || it.name===p.name);
+  if(!editingIsQuote){
+    const alreadyReserved = existing ? existing.qty : 0;
+    if(alreadyReserved + 1 > p.stock){
+      showToast(`لا يوجد مخزون كافي لـ"${p.name}" (متوفر: ${p.stock})`);
+      return;
+    }
+  }
+  if(existing){
+    existing.qty += 1;
+  }else{
+    editingItems.push({id:p.id, name:p.name, icon:p.icon, qty:1, price:p.price, discount:0, lineTotal:p.price});
+  }
+  renderInvoiceEditItems();
+  showToast(`✅ تمت إضافة ${p.name}`);
+}
+
 // saves edits to an existing invoice or quote: recomputes totals. For a real sale
 // (live or archived), also adjusts product stock by the DIFFERENCE between old and
 // new quantities. For a quote, stock is never touched since a quote never reserved
@@ -1660,14 +1893,17 @@ async function saveInvoiceEdit(){
 
 /* ===== Admin ===== */
 
-// switches between the reports sub-page and the separate low-stock alerts sub-page,
-// so low-stock products never show up mixed into the main reports page
+// switches between the reports sub-page, the low-stock alerts sub-page, and the
+// orders (طلبيات) sub-page, so each stays on its own separate screen
 function showAdminSub(view){
   adminSubView = view;
   document.getElementById('adminReportsView').style.display = view==='reports' ? 'block' : 'none';
   document.getElementById('adminStockView').style.display = view==='stock' ? 'block' : 'none';
+  document.getElementById('adminOrdersView').style.display = view==='orders' ? 'block' : 'none';
   document.getElementById('adminSubReportsBtn').classList.toggle('active', view==='reports');
   document.getElementById('adminSubStockBtn').classList.toggle('active', view==='stock');
+  document.getElementById('adminSubOrdersBtn').classList.toggle('active', view==='orders');
+  if(view==='orders') renderOrdersList();
 }
 
 // "تصفير الحسابات": zeroes out the live sales stats/counters shown in the dashboard,
@@ -1726,6 +1962,108 @@ function renderArchiveSection(){
         </tbody>
       </table>
     </details>
+  `).join('');
+}
+
+// ===== طلبيات (Orders / restock notes) =====
+function openOrderNoteForm(id){
+  document.getElementById('orderNoteFormOverlay').classList.add('show');
+  if(id){
+    const n = orderNotes.find(x=>x.id===id);
+    if(!n) return;
+    document.getElementById('orderNoteFormTitle').textContent = 'تعديل الطلبية';
+    document.getElementById('onId').value = n.id;
+    document.getElementById('onTitle').value = n.title || '';
+    document.getElementById('onText').value = n.text || '';
+  }else{
+    document.getElementById('orderNoteFormTitle').textContent = 'إضافة طلبية';
+    document.getElementById('onId').value = '';
+    document.getElementById('onTitle').value = '';
+    document.getElementById('onText').value = '';
+  }
+  setTimeout(()=>document.getElementById('onText').focus(), 50);
+}
+function toggleOrderNoteForm(show){ document.getElementById('orderNoteFormOverlay').classList.toggle('show', show); }
+
+async function saveOrderNote(){
+  const id = document.getElementById('onId').value;
+  const title = document.getElementById('onTitle').value.trim();
+  const text = document.getElementById('onText').value.trim();
+  if(!text){ showToast('اكتب اش خاصك تتقدا قبل الحفظ'); return; }
+  if(id){
+    const n = orderNotes.find(x=>x.id===id);
+    if(n){ n.title = title; n.text = text; n.updatedAt = new Date().toLocaleString('ar-MA'); }
+  }else{
+    orderNotes.unshift({
+      id: 'on'+Date.now(),
+      title, text,
+      createdBy: currentUser ? currentUser.name : 'غير معروف',
+      date: new Date().toLocaleString('ar-MA'),
+      timestamp: Date.now()
+    });
+  }
+  await persistOrderNotes();
+  toggleOrderNoteForm(false);
+  renderOrdersList();
+  if(document.getElementById('ordersBadgeCount')) document.getElementById('ordersBadgeCount').textContent = orderNotes.length;
+  showToast('تم حفظ الطلبية');
+}
+async function deleteOrderNote(id){
+  if(!confirm('واش متأكد من حذف هذه الطلبية؟')) return;
+  orderNotes = orderNotes.filter(n=>n.id!==id);
+  await persistOrderNotes();
+  renderOrdersList();
+  showToast('تم حذف الطلبية');
+}
+
+// downloads a single order note as a small .txt file
+function downloadOrderNote(id){
+  const n = orderNotes.find(x=>x.id===id);
+  if(!n) return;
+  const content = `مكتبة منار — طلبية\n${n.title?('العنوان: '+n.title+'\n'):''}التاريخ: ${n.date}\n${n.createdBy?('بواسطة: '+n.createdBy+'\n'):''}\n----------------------------\n${n.text}\n`;
+  triggerTextDownload(content, `طلبية-${n.id}.txt`);
+}
+// downloads ALL order notes combined into one .txt file
+function downloadAllOrders(){
+  if(orderNotes.length===0){ showToast('لا توجد طلبيات لتنزيلها'); return; }
+  let content = `مكتبة منار — كل الطلبيات\nتاريخ التصدير: ${new Date().toLocaleString('ar-MA')}\n============================\n\n`;
+  orderNotes.forEach((n,idx)=>{
+    content += `${idx+1}) ${n.title || 'طلبية بدون عنوان'}\nالتاريخ: ${n.date}\n${n.createdBy?('بواسطة: '+n.createdBy+'\n'):''}----------------------------\n${n.text}\n\n============================\n\n`;
+  });
+  triggerTextDownload(content, `كل-الطلبيات-${Date.now()}.txt`);
+}
+function triggerTextDownload(content, filename){
+  const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function renderOrdersList(){
+  const wrap = document.getElementById('ordersListWrap');
+  if(!wrap) return;
+  if(orderNotes.length===0){
+    wrap.innerHTML = `<div class="orders-empty">📝 لا توجد طلبيات محفوظة بعد — اضغط "إضافة طلبية جديدة" باش تبدا</div>`;
+    return;
+  }
+  wrap.innerHTML = orderNotes.map(n=>`
+    <div class="order-note-card">
+      <div class="onc-head">
+        <div class="onc-title">${n.title ? n.title : '📝 طلبية بدون عنوان'}</div>
+        <div class="onc-date">${n.date}${n.createdBy?(' — '+n.createdBy):''}</div>
+      </div>
+      <div class="onc-text">${(n.text||'').replace(/</g,'&lt;')}</div>
+      <div class="onc-actions">
+        <button class="btn btn-outline" style="padding:7px 12px;" onclick="openOrderNoteForm('${n.id}')">✏️ تعديل</button>
+        <button class="btn btn-outline" style="padding:7px 12px;" onclick="downloadOrderNote('${n.id}')">⬇️ تنزيل</button>
+        <button class="icon-del" onclick="deleteOrderNote('${n.id}')">🗑️</button>
+      </div>
+    </div>
   `).join('');
 }
 
@@ -1801,12 +2139,15 @@ function renderAdmin(){
     <div class="stat-card" style="border-color:#C0392B;cursor:pointer;" onclick="showAdminSub('stock')"><div class="num nums">${lowStock.length}</div><div class="lbl">تنبيهات المخزون (اضغط للتفاصيل)</div></div>
     <div class="stat-card"><div class="num nums">${sales.length}</div><div class="lbl">عدد عمليات البيع</div></div>
     <div class="stat-card"><div class="num nums">${totalRevenue.toFixed(2)}</div><div class="lbl">إجمالي المبيعات (د.م)</div></div>
-    <div class="stat-card" style="border-color:var(--ink-soft);"><div class="num nums">${quotes.length}</div><div class="lbl">عدد التسعيرات المحفوظة</div></div>
+    <div class="stat-card"><div class="num nums">${quotes.length}</div><div class="lbl">عدد التسعيرات المحفوظة</div></div>
+    <div class="stat-card" style="border-color:var(--ink-soft);cursor:pointer;" onclick="showAdminSub('orders')"><div class="num nums">${orderNotes.length}</div><div class="lbl">عدد الطلبيات المحفوظة (اضغط للتفاصيل)</div></div>
   `;
 
   // badge on the sub-tab button that opens the separate low-stock page
   const stockBadge = document.getElementById('stockBadgeCount');
   if(stockBadge) stockBadge.textContent = lowStock.length;
+  const ordersBadge = document.getElementById('ordersBadgeCount');
+  if(ordersBadge) ordersBadge.textContent = orderNotes.length;
 
   // low-stock products now live only on their own separate sub-page (adminStockView),
   // not mixed into the main reports page
@@ -1916,6 +2257,7 @@ function renderAdmin(){
     'تعديل المخزون': 'color:var(--gold);font-weight:700;',
     'بيع': 'color:var(--ink-soft);font-weight:700;',
     'تسعيرة': 'color:var(--ink-soft);font-weight:700;',
+    'تحويل تسعيرة لبيع': 'color:var(--green-ok);font-weight:700;',
     'حذف منتج': 'color:var(--wine-deep);font-weight:700;',
     'تصفير الحسابات': 'color:var(--wine-deep);font-weight:700;',
     'حذف فاتورة': 'color:var(--wine-deep);font-weight:700;',
@@ -1936,6 +2278,7 @@ function renderAdmin(){
 
   renderArchiveSection();
   renderInvoicesTable();
+  if(adminSubView==='orders') renderOrdersList();
 }
 // combines the cashier filter with the "from date" / "to date" range filter for the sales log
 function getFilteredSales(){
@@ -2123,9 +2466,9 @@ async function deleteProduct(id){
   showToast('تم حذف المنتوج');
 }
 
-// النقر خارج نافذة "إضافة/تعديل منتوج" أو "إضافة/تعديل مستخدم" أو "تعديل الفاتورة" ما كيسدهاش،
+// النقر خارج نافذة "إضافة/تعديل منتوج" أو "إضافة/تعديل مستخدم" أو "تعديل الفاتورة" أو "الطلبية" ما كيسدهاش،
 // باش ما تضيعش المعلومات لي دخلتيها بالغلط بضغطة برا. التسدّ غير بزر ✕ أو بعد الحفظ.
-const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay', 'invoiceEditOverlay', 'invoiceLookupOverlay'];
+const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay', 'invoiceEditOverlay', 'invoiceLookupOverlay', 'orderNoteFormOverlay'];
 document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click', e=>{ if(e.target===ov && !OVERLAYS_NO_OUTSIDE_CLOSE.includes(ov.id)) ov.classList.remove('show'); });
 });
