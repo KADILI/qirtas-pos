@@ -147,8 +147,14 @@
   .order-line .icon-circle{ width:34px; height:34px; border-radius:50%; background:var(--paper); display:flex; align-items:center; justify-content:center; font-size:16px; flex:0 0 auto;}
   .order-line .oname{ font-weight:700; font-size:13.5px; }
   .order-line .oprice{ font-size:12px; color:var(--ink-soft); }
+  .oname-input{ font-weight:700; font-size:13.5px; border:1px solid transparent; background:transparent; border-radius:5px; padding:2px 4px; width:100%; font-family:inherit; color:var(--ink); }
+  .oname-input:hover, .oname-input:focus{ border-color:var(--paper-deep); background:#fff; outline:none; }
+  .oprice-row{ display:flex; align-items:center; gap:4px; margin-top:2px; }
+  .oprice-input{ font-size:12px; color:var(--ink-soft); border:1px solid transparent; background:transparent; border-radius:5px; padding:1px 4px; width:60px; font-family:inherit; }
+  .oprice-input:hover, .oprice-input:focus{ border-color:var(--paper-deep); background:#fff; outline:none; color:var(--ink); }
   .qty-ctrl{ display:flex; align-items:center; gap:6px; }
   .qty-btn{ width:22px; height:22px; border-radius:50%; border:1px solid var(--ink-soft); background:#fff; cursor:pointer; font-weight:700; font-size:13px; line-height:1;}
+  .qty-input{ width:34px; text-align:center; border:1px solid var(--paper-deep); border-radius:6px; padding:2px 0; font-family:inherit; font-size:13px; }
   .line-total{ font-weight:900; font-size:14px; min-width:56px; text-align:left; }
   .remove-x{ background:none; border:none; color:var(--wine-deep); cursor:pointer; font-size:14px; }
 
@@ -807,6 +813,8 @@ let orderNotes = []; // لائحة "الطلبيات" — ملاحظات حرة 
 let currentUser = null;
 let order = {}; // {productId: qty}
 let orderDiscount = {}; // {productId: percent 0-100} discount applied per product line
+let orderNameOverride = {}; // {productId: customName} تعديل يدوي لاسم المنتوج فهاد الطلبية فقط
+let orderPriceOverride = {}; // {productId: customPrice} تعديل يدوي لثمن المنتوج فهاد الطلبية فقط
 let overallDiscountPercent = 0; // discount percent applied on the whole order subtotal
 let activeCategory = "الكل";
 let searchTerm = "";
@@ -1172,15 +1180,54 @@ function addToOrder(id){
 function changeOrderQty(id, delta){
   const p = products.find(x=>x.id===id);
   let q = (order[id]||0)+delta;
-  if(q<=0){ delete order[id]; delete orderDiscount[id]; }
+  if(q<=0){ delete order[id]; delete orderDiscount[id]; delete orderNameOverride[id]; delete orderPriceOverride[id]; }
   else if(q>p.stock){ showToast('الكمية المطلوبة تفوق المخزون'); return; }
   else order[id]=q;
   renderOrder();
 }
-function removeLine(id){ delete order[id]; delete orderDiscount[id]; renderOrder(); }
+// تعديل الكمية مباشرة من خانة الإدخال فالكاشير
+function setLineQty(id, val){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  let q = parseInt(val, 10);
+  if(isNaN(q) || q<=0){ delete order[id]; delete orderDiscount[id]; delete orderNameOverride[id]; delete orderPriceOverride[id]; renderOrder(); return; }
+  if(q>p.stock){ showToast('الكمية المطلوبة تفوق المخزون'); q = p.stock; }
+  order[id]=q;
+  renderOrder();
+}
+// تعديل اسم المنتوج فهاد الطلبية فقط (ماكيبدلش اسم المنتوج الأصلي فالمخزون)
+function setLineName(id, val){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  const v = (val||'').trim();
+  if(!v || v===p.name) delete orderNameOverride[id];
+  else orderNameOverride[id] = v;
+  renderOrder();
+}
+// تعديل ثمن المنتوج فهاد الطلبية فقط (ماكيبدلش ثمن المنتوج الأصلي فالمخزون)
+function setLinePrice(id, val){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  let n = parseFloat(val);
+  if(isNaN(n) || n<0) n = p.price;
+  if(n===p.price) delete orderPriceOverride[id];
+  else orderPriceOverride[id] = n;
+  renderOrder();
+}
+function getLineName(id){
+  const p = products.find(x=>x.id===id);
+  return orderNameOverride[id] || (p?p.name:'');
+}
+function getLinePrice(id){
+  const p = products.find(x=>x.id===id);
+  return orderPriceOverride[id]!==undefined ? orderPriceOverride[id] : (p?p.price:0);
+}
+function removeLine(id){ delete order[id]; delete orderDiscount[id]; delete orderNameOverride[id]; delete orderPriceOverride[id]; renderOrder(); }
 function clearOrder(){
   order={};
   orderDiscount={};
+  orderNameOverride={};
+  orderPriceOverride={};
   overallDiscountPercent = 0;
   const overallInput = document.getElementById('overallDiscountInput');
   if(overallInput) overallInput.value = 0;
@@ -1210,7 +1257,8 @@ function lineSubtotal(id){
   if(!p) return 0;
   const qty = order[id]||0;
   const discount = orderDiscount[id]||0;
-  return p.price*qty*(1-discount/100);
+  const price = getLinePrice(id);
+  return price*qty*(1-discount/100);
 }
 // sum of all lines after per-product discounts, before the overall discount
 function orderSubtotal(){
@@ -1251,12 +1299,17 @@ function renderOrder(){
       const p = products.find(x=>x.id===id);
       if(!p) return '';
       const discount = orderDiscount[id]||0;
+      const lineName = getLineName(id);
+      const linePrice = getLinePrice(id);
       return `
         <div class="order-line">
           <div class="icon-circle">${p.icon}</div>
           <div style="flex:1;">
-            <div class="oname">${p.name}</div>
-            <div class="oprice nums">${p.price} د.م</div>
+            <input type="text" class="oname-input" value="${lineName.replace(/"/g,'&quot;')}" onchange="setLineName('${id}', this.value)" title="عدّل اسم المنتوج فهاد الطلبية">
+            <div class="oprice-row">
+              <input type="number" class="oprice-input nums" min="0" step="0.01" value="${linePrice}" onchange="setLinePrice('${id}', this.value)" title="عدّل الثمن فهاد الطلبية">
+              <span class="ld-label">د.م</span>
+            </div>
             <div class="line-discount-row">
               <span class="ld-label">خصم على المنتوج</span>
               <input type="number" class="line-discount-input nums" min="0" max="100" value="${discount}" onchange="setLineDiscount('${id}', this.value)">
@@ -1265,7 +1318,7 @@ function renderOrder(){
           </div>
           <div class="qty-ctrl">
             <button class="qty-btn" onclick="changeOrderQty('${id}',-1)">−</button>
-            <span class="nums">${order[id]}</span>
+            <input type="number" class="qty-input nums" min="1" value="${order[id]}" onchange="setLineQty('${id}', this.value)">
             <button class="qty-btn" onclick="changeOrderQty('${id}',1)">+</button>
           </div>
           <div class="line-total nums">${lineSubtotal(id).toFixed(2)}</div>
@@ -1291,7 +1344,7 @@ async function generateQuote(){
   const items = ids.map(id=>{
     const p = products.find(x=>x.id===id);
     const discount = orderDiscount[id]||0;
-    return {id:p.id, name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal:lineSubtotal(id)};
+    return {id:p.id, name:getLineName(id), icon:p.icon, qty:order[id], price:getLinePrice(id), discount, lineTotal:lineSubtotal(id)};
   });
   const customerName = document.getElementById('customerNameInput').value.trim();
   const customerPhone = document.getElementById('customerPhoneInput').value.trim();
@@ -1370,7 +1423,6 @@ function showQuote(quote, isReprint){
         ${overallDisc>0 ? `<div class="inv-summary-row discount"><span>خصم على المجموع (${overallDisc}%)</span><span class="nums">- ${(quote.subtotal-quote.total).toFixed(2)} د.م</span></div>` : ''}
         <div class="inv-summary-total"><span>المجموع النهائي</span><span class="nums">${(+quote.total).toFixed(2)} د.م</span></div>
       </div>
-      <div class="inv-note">⚠️ هذه تسعيرة تقديرية فقط وليست فاتورة بيع، والأسعار قابلة للتغيير</div>
       <div class="inv-footer">مكتبة منار — شكرا لثقتكم 🌿</div>
     </div>
   ` + buildThermalHtml({
@@ -1380,7 +1432,6 @@ function showQuote(quote, isReprint){
     subtotal: quote.subtotal,
     overallDiscountPercent: overallDisc,
     total: quote.total,
-    noteText: '⚠️ تسعيرة تقديرية فقط، وليست فاتورة بيع',
     footer: 'مكتبة منار — شكرا لثقتكم 🌿'
   });
   document.getElementById('receiptOverlay').classList.add('show');
@@ -1397,7 +1448,7 @@ async function finishSale(){
     const discount = orderDiscount[id]||0;
     const lineTotal = lineSubtotal(id);
     p.stock -= order[id];
-    return {id:p.id, name:p.name, icon:p.icon, qty:order[id], price:p.price, discount, lineTotal};
+    return {id:p.id, name:getLineName(id), icon:p.icon, qty:order[id], price:getLinePrice(id), discount, lineTotal};
   });
   const customerName = document.getElementById('customerNameInput').value.trim();
   const customerPhone = document.getElementById('customerPhoneInput').value.trim();
@@ -1422,6 +1473,8 @@ async function finishSale(){
   showReceipt(sale);
   order = {};
   orderDiscount = {};
+  orderNameOverride = {};
+  orderPriceOverride = {};
   overallDiscountPercent = 0;
   const overallInput = document.getElementById('overallDiscountInput');
   if(overallInput) overallInput.value = 0;
