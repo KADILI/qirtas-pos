@@ -989,48 +989,52 @@ function listenRealtime(){
 function manualSync(){ showToast('المزامنة تلقائية ومباشرة عبر Firebase ✅'); }
 
 let suppressNextSnapshotRender = false; // true right after we push our own write, so the local echo from onSnapshot doesn't force a second full re-render
+// كل دالة persist* كترجع true إلا نجح الحفظ فـ Firebase، أو false إلا فشل —
+// هاد الشي مهم بزاف: قبل، الخطأ كان كيتلقط هنا وكيبين تنبيه، لكن الكود اللي استدعى
+// الدالة كان كيكمل كأن كلشي مزيان (كيبين "تم الحفظ" وكيسد النافذة)، فكانت البيانات
+// كتضيع بصمت من غير ما يعرف المستخدم أن الحفظ فشل فعلا.
 async function persistProducts(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ البيانات — تحقق من إعدادات Firebase'); }
+  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); return true; }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ البيانات — تحقق من إعدادات Firebase'); return false; }
 }
 async function persistSales(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); }
+  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); return true; }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); return false; }
 }
 async function persistQuotes(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {quotes, movements}, {merge:true}); }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التسعيرة — تحقق من إعدادات Firebase'); }
+  try{ await setDoc(storeRef, {quotes, movements}, {merge:true}); return true; }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التسعيرة — تحقق من إعدادات Firebase'); return false; }
 }
 async function persistUsers(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {users}, {merge:true}); }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); }
+  try{ await setDoc(storeRef, {users}, {merge:true}); return true; }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); return false; }
 }
 async function persistArchive(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); }
+  try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); return true; }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); return false; }
 }
 async function persistOrderNotes(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {orderNotes}, {merge:true}); }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الطلبية — تحقق من إعدادات Firebase'); }
+  try{ await setDoc(storeRef, {orderNotes}, {merge:true}); return true; }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الطلبية — تحقق من إعدادات Firebase'); return false; }
 }
 // used when converting a quote to a final sale: touches products, sales AND quotes together
 async function persistConvert(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {products, sales, quotes, movements}, {merge:true}); }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التحويل — تحقق من إعدادات Firebase'); }
+  try{ await setDoc(storeRef, {products, sales, quotes, movements}, {merge:true}); return true; }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التحويل — تحقق من إعدادات Firebase'); return false; }
 }
 function addMovement(type, description){
   movements.unshift({
@@ -1160,6 +1164,21 @@ function clearProductSearch(){
   document.getElementById('searchWrap').classList.remove('has-text');
   renderProducts();
   input.focus();
+}
+
+// كيرجع فلتر الفئة لـ"الكل" ويمسح خانة البحث — كنستعملوها بعد إضافة منتوج جديد
+// باش يبان مباشرة فالشبكة، بلا ما يبقى مخبي بسبب فلتر (فئة أو بحث) ما كيطابقوش
+function resetProductFinderFilters(){
+  activeCategory = "الكل";
+  bookSchoolFilter = "الكل";
+  bookLevelFilter = "الكل";
+  searchTerm = '';
+  const input = document.getElementById('searchInput');
+  if(input) input.value = '';
+  const searchWrap = document.getElementById('searchWrap');
+  if(searchWrap) searchWrap.classList.remove('has-text');
+  renderCategories();
+  renderBookFilters();
 }
 document.getElementById('searchInput').addEventListener('input', e=>{
   searchTerm=e.target.value;
@@ -2544,14 +2563,24 @@ async function saveUser(){
     showToast('اسم المستخدم هذا مستعمل من طرف حساب آخر');
     return;
   }
+  let isNewUser = false;
+  let previousState = null;
   if(id){
     const u = users.find(x=>x.id===id);
+    previousState = {...u};
     Object.assign(u, {name, username, password, role});
     if(currentUser && currentUser.id===id) currentUser = u;
   }else{
+    isNewUser = true;
     users.push({id:'u'+Date.now(), name, username, password, role});
   }
-  await persistUsers();
+  const saved = await persistUsers();
+  if(!saved){
+    if(isNewUser){ users.pop(); }
+    else if(previousState){ Object.assign(users.find(x=>x.id===id), previousState); }
+    renderAdmin();
+    return; // كنخليو النافذة مفتوحة والبيانات مرجعة للوراء، حيت الحفظ فشل فعلا
+  }
   toggleUserForm(false);
   renderAdmin();
   showToast('تم حفظ المستخدم');
@@ -2561,8 +2590,14 @@ async function deleteUser(id){
   if(users.length<=1){ showToast('لازم يبقى حساب واحد ديال المدير على الأقل'); return; }
   if(currentUser && currentUser.id===id){ showToast('ما يمكنش تحذف الحساب لي مدخل بيه دابا'); return; }
   if(!confirm('واش متأكد من حذف هذا المستخدم؟')) return;
+  const removedUser = users.find(u=>u.id===id);
   users = users.filter(u=>u.id!==id);
-  await persistUsers();
+  const saved = await persistUsers();
+  if(!saved){
+    if(removedUser) users.push(removedUser); // نرجعوه حيت الحذف ما تسجلش فعلا
+    renderAdmin();
+    return;
+  }
   renderAdmin();
   showToast('تم حذف المستخدم');
 }
@@ -2640,8 +2675,11 @@ async function saveProduct(){
     showToast('هذا الباركود مستعمل من طرف منتوج آخر');
     return;
   }
+  let isNewProduct = false;
+  let previousState = null; // snapshot used to roll back locally if the Firebase write fails
   if(id){
     const p = products.find(x=>x.id===id);
+    previousState = {...p};
     const oldStock = p.stock;
     Object.assign(p,{name,category,icon,barcode,price,stock,threshold,schoolType,level});
     if(stock !== oldStock){
@@ -2649,10 +2687,30 @@ async function saveProduct(){
       addMovement('تعديل المخزون', `"${name}": تغيرت الكمية من ${oldStock} إلى ${stock} (${diff>0?'+':''}${diff})`);
     }
   }else{
-    products.push({id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold,schoolType,level});
+    isNewProduct = true;
+    const newProduct = {id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold,schoolType,level};
+    products.push(newProduct);
     addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
   }
-  await persistProducts();
+
+  const saved = await persistProducts();
+  if(!saved){
+    // الحفظ فشل فعلا (مشكل شبكة/Firebase) — نرجعو التغيير المحلي للوراء باش
+    // الحالة ديال الواجهة تبقى مطابقة لما هو محفوظ فعلا، ونخليو النافذة مفتوحة
+    // باش المستخدم يقدر يعاود يحاول، بلا ما نبينو ليه تنبيه "تم الحفظ" كاذب
+    if(isNewProduct){
+      products.pop();
+      movements.shift();
+    }else if(previousState){
+      const p = products.find(x=>x.id===id);
+      Object.assign(p, previousState);
+      if(previousState.stock !== stock) movements.shift();
+    }
+    renderAdmin(); renderProducts(); renderCategories();
+    return;
+  }
+
+  if(isNewProduct) resetProductFinderFilters(); // باش المنتوج الجديد يبان مباشرة، حتى لو كان الفلتر النشط ما كيطابقوش
   toggleProductForm(false);
   renderAdmin(); renderProducts(); renderCategories();
   showToast('تم حفظ المنتوج');
@@ -2662,7 +2720,12 @@ async function deleteProduct(id){
   const p = products.find(x=>x.id===id);
   products = products.filter(p=>p.id!==id);
   if(p) addMovement('حذف منتج', `تم حذف "${p.name}" (كان بكمية ${p.stock})`);
-  await persistProducts();
+  const saved = await persistProducts();
+  if(!saved){
+    if(p){ products.push(p); movements.shift(); } // نرجعو المنتوج حيت الحذف ما تسجلش فعلا
+    renderAdmin(); renderProducts();
+    return;
+  }
   renderAdmin(); renderProducts();
   showToast('تم حذف المنتوج');
 }
