@@ -33,7 +33,6 @@
   h1,h2,h3,.display{ font-family:'Markazi Text', serif; font-weight:700; }
   .nums{ font-family:'IBM Plex Sans Arabic', sans-serif; font-variant-numeric: tabular-nums; }
 
-  /* ===== App shell ===== */
   .app{ display:flex; flex-direction:column; height:100vh; }
   .topbar{
     background: linear-gradient(180deg, var(--ink) 0%, #24374F 100%);
@@ -47,7 +46,7 @@
   .sync-status{ font-size:12px; color:var(--gold-soft); display:flex; align-items:center; gap:5px; }
   .sync-status.syncing{ color:#fff; }
   .sync-status.offline{ color:#E9A0A0; }
-  .topbar .actions{ display:flex; gap:8px; }
+  .topbar .actions{ display:flex; gap:8px; flex-wrap:wrap; }
   .icon-btn{
     background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
     color:var(--paper); border-radius:9px; padding:8px 14px; cursor:pointer;
@@ -58,7 +57,6 @@
 
   .main-split{ flex:1; display:flex; min-height:0; }
 
-  /* ===== Product side ===== */
   .product-side{ flex:1; display:flex; flex-direction:column; padding:14px 16px; min-width:0; }
   .cat-row{ display:flex; gap:8px; overflow-x:auto; margin-bottom:12px; }
   .cat-chip{
@@ -75,9 +73,6 @@
     display:flex; align-items:center; gap:8px; background:var(--ink); border-radius:9px;
     padding:10px 14px; margin-bottom:10px;
   }
-  /* ===== Product-side finder toolbar (redesigned) =====
-     scan + search now share one row instead of stacking as two separate full-width
-     rows, so the category chips and product grid start higher up the screen. */
   .finder-row{ display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
   .finder-row .scan-row{ flex:1 1 260px; margin-bottom:0; }
   .finder-row .search-wrap{ flex:1 1 220px; position:relative; display:flex; align-items:center; }
@@ -92,7 +87,6 @@
   }
   .finder-row .search-wrap.has-text .search-clear{ display:block; }
   .product-toolbar{ padding-bottom:10px; border-bottom:1px solid var(--paper-deep); margin-bottom:12px; }
-  .product-toolbar .results-count{ margin-bottom:0; }
   .results-count{ font-size:12.5px; color:var(--ink-soft); margin:0 0 8px; padding:0 2px; }
   .results-count b{ color:var(--ink); }
   .scan-row .scan-icon{ font-size:18px; }
@@ -133,7 +127,6 @@
   .pbtn .pbook-tag.school-private{ background:#FBEBD3; color:#8A5A16; border-color:#E7C57A; }
   .pbtn .pbook-tag.school-both{ background:#EAE3F5; color:#5B3D8A; border-color:#D6C7EE; }
 
-  /* ===== Order side (cashier ticket) ===== */
   .order-side{
     width:380px; flex:0 0 380px; background:var(--panel); border-right:1px solid var(--paper-deep);
     display:flex; flex-direction:column; box-shadow:-6px 0 16px rgba(0,0,0,0.04);
@@ -179,7 +172,6 @@
   .btn-gold{ background:var(--gold); color:var(--ink); }
   .btn-danger-outline{ background:transparent; border:1px solid var(--wine-deep); color:var(--wine-deep); width:100%; margin-top:8px; }
 
-  /* ===== Overlays / Modals ===== */
   .overlay{ position:fixed; inset:0; background:rgba(27,42,65,0.45); z-index:100; display:none; align-items:center; justify-content:center; }
   .overlay.show{ display:flex; }
   .modal-box{ background:var(--paper); width:min(420px,92vw); border-radius:var(--radius); padding:22px; box-shadow:0 20px 50px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto; }
@@ -192,7 +184,6 @@
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .login-box{ text-align:center; }
 
-  /* Receipt (on-screen preview inside the modal) */
   .receipt{ background:#fff; font-family:'IBM Plex Sans Arabic'; font-size:13px; padding:10px 4px; }
   .receipt h2{ text-align:center; margin:0 0 2px; font-size:20px; }
   .receipt .sub{ text-align:center; font-size:12px; color:var(--ink-soft); margin-bottom:10px; }
@@ -200,7 +191,6 @@
   .receipt-line{ display:flex; justify-content:space-between; margin-bottom:4px; }
   .receipt-total{ display:flex; justify-content:space-between; font-weight:900; font-size:16px; }
 
-  /* ===== A4 invoice layout — used when printing the receipt/quote on A4 paper ===== */
   .invoice-a4{ background:#fff; font-family:'IBM Plex Sans Arabic'; color:var(--ink); padding:6mm; }
   .inv-header{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--ink); padding-bottom:14px; margin-bottom:16px; }
   .inv-logo{ font-family:'Markazi Text',serif; font-weight:700; font-size:26px; }
@@ -221,7 +211,6 @@
   .inv-footer{ margin-top:30px; text-align:center; font-size:12.5px; color:var(--ink-soft); border-top:1px dashed var(--paper-deep); padding-top:14px; }
   .inv-note{ margin-top:16px; padding:10px 14px; background:#FBEBD3; border:1px solid #E7C57A; border-radius:8px; font-size:12.5px; color:#8A5A16; }
 
-  /* ===== Thermal 80mm receipt layout — used when printing on an 80mm thermal printer ===== */
   .invoice-thermal{ width:76mm; margin:0 auto; background:#fff; font-family:'IBM Plex Sans Arabic', monospace; font-size:11.5px; color:#000; padding:2mm 1mm; }
   .invoice-thermal h3{ text-align:center; margin:0 0 2px; font-size:16px; }
   .invoice-thermal .th-sub{ text-align:center; font-size:10.5px; color:#333; }
@@ -232,7 +221,6 @@
   .invoice-thermal .th-footer{ text-align:center; font-size:10.5px; margin-top:10px; }
   .invoice-thermal .th-note{ text-align:center; font-size:10px; margin-top:6px; color:#333; }
 
-  /* ===== Admin / Reports view ===== */
   .admin-scroll{ flex:1; overflow-y:auto; padding:20px 24px; }
   .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:20px; }
   .stat-card{ background:var(--panel); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); border-right:5px solid var(--gold); }
@@ -248,9 +236,6 @@
   th{ background:var(--paper-deep); font-weight:700; }
   .icon-del{ background:none; border:none; cursor:pointer; font-size:15px; color:var(--wine-deep); }
 
-  /* ===== Admin sidebar navigation ===== */
-  /* replaces the old horizontal sub-tabs: each admin section now lives on its own
-     screen, reachable from a fixed side menu, so the page is never one long scroll */
   .admin-shell{ flex:1; display:flex; min-height:0; }
   .admin-sidebar{
     width:230px; flex:0 0 230px; background:var(--panel); border-left:1px solid var(--paper-deep);
@@ -286,43 +271,7 @@
   .stock-page-head{ text-align:center; margin-bottom:18px; }
   .stock-page-head h2{ margin:0 0 4px; }
   .stock-page-head p{ margin:0; color:var(--ink-soft); font-size:14px; }
-  @media (max-width: 980px){
-    .admin-shell{ flex-direction:column; }
-    .admin-sidebar{ width:100%; flex-basis:auto; border-left:none; border-bottom:1px solid var(--paper-deep); }
-    .admin-nav{ flex-direction:row; flex-wrap:wrap; padding:10px; }
-    .admin-nav-group-label{ display:none; }
-    .admin-nav-sep{ display:none; }
-    .admin-nav-btn{ width:auto; }
-  }
 
-  /* Discount inputs */
-  .line-discount-row{ display:flex; align-items:center; gap:4px; margin-top:4px; }
-  .line-discount-row .ld-label{ font-size:11px; color:var(--ink-soft); }
-  .line-discount-input{
-    width:46px; padding:3px 4px; border-radius:6px; border:1px solid var(--paper-deep);
-    font-family:'IBM Plex Sans Arabic'; font-size:12px; text-align:center;
-  }
-  .overall-discount-row{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    margin-bottom:8px; padding:8px 10px; background:var(--paper); border-radius:8px;
-  }
-  .overall-discount-row label{ font-size:13px; font-weight:700; color:var(--ink); }
-  .overall-discount-row input{
-    width:70px; padding:6px 8px; border-radius:7px; border:1px solid var(--paper-deep);
-    font-family:'IBM Plex Sans Arabic'; font-size:14px; text-align:center; font-weight:700;
-  }
-  .discount-amount-row{ color:var(--wine-deep) !important; }
-
-  /* Customer info block above the discount row on the cashier side */
-  .customer-row{
-    display:flex; gap:8px; margin-bottom:10px;
-  }
-  .customer-row input{
-    flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--paper-deep);
-    font-family:'Tajawal'; font-size:13px;
-  }
-
-  /* Sales date-range filter bar (Admin & Reports) */
   .date-range-bar{
     display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
     background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow);
@@ -339,7 +288,6 @@
   .toast.show{ display:block; animation: fadein .2s ease; }
   @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
-  /* Add-product-to-invoice/quote picker (inside edit modal) */
   .ie-add-product-wrap{ margin-bottom:12px; }
   .ie-add-results{ max-height:180px; overflow-y:auto; margin-top:6px; border:1px solid var(--paper-deep); border-radius:8px; background:#fff; display:none; }
   .ie-add-results.show{ display:block; }
@@ -350,7 +298,6 @@
   .ie-add-result-row .ie-ar-meta{ font-size:11.5px; color:var(--ink-soft); }
   .ie-convert-row{ margin-top:10px; }
 
-  /* Orders / restock-list page */
   .orders-toolbar{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
   .order-note-card{ background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:10px; border-right:5px solid var(--wine); }
   .order-note-card .onc-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
@@ -360,14 +307,21 @@
   .order-note-card .onc-actions{ display:flex; gap:8px; margin-top:10px; }
   .orders-empty{ text-align:center; color:var(--ink-soft); padding:40px 10px; }
 
+  .customer-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .customer-row input{ flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--paper-deep); font-family:'Tajawal'; font-size:13px; }
+  .overall-discount-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; padding:8px 10px; background:var(--paper); border-radius:8px; }
+  .overall-discount-row label{ font-size:13px; font-weight:700; color:var(--ink); }
+  .overall-discount-row input{ width:70px; padding:6px 8px; border-radius:7px; border:1px solid var(--paper-deep); font-family:'IBM Plex Sans Arabic'; font-size:14px; text-align:center; font-weight:700; }
+  .discount-amount-row{ color:var(--wine-deep) !important; }
+  .line-discount-row{ display:flex; align-items:center; gap:4px; margin-top:4px; }
+  .line-discount-row .ld-label{ font-size:11px; color:var(--ink-soft); }
+  .line-discount-input{ width:46px; padding:3px 4px; border-radius:6px; border:1px solid var(--paper-deep); font-family:'IBM Plex Sans Arabic'; font-size:12px; text-align:center; }
+
   @media print{
     @page{ size:A4; margin:14mm; }
     .app{ display:none !important; }
     body *{ visibility:hidden; }
     #printArea, #printArea *{ visibility:visible; }
-    /* the modal/overlay wrappers around #printArea used to clip long invoices
-       (max-height + overflow-y:auto on .modal-box) — neutralize that for print
-       so multi-page invoices come out complete instead of being cut off */
     .overlay{ position:static !important; overflow:visible !important; inset:auto !important; }
     .modal-box{ max-height:none !important; overflow:visible !important; }
     #printArea{ position:absolute; top:0; right:0; left:0; width:100%; }
@@ -379,6 +333,14 @@
   @media (max-width: 860px){
     .order-side{ width:320px; flex-basis:320px; }
     .pgrid{ grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); }
+  }
+  @media (max-width: 980px){
+    .admin-shell{ flex-direction:column; }
+    .admin-sidebar{ width:100%; flex-basis:auto; border-left:none; border-bottom:1px solid var(--paper-deep); }
+    .admin-nav{ flex-direction:row; flex-wrap:wrap; padding:10px; }
+    .admin-nav-group-label{ display:none; }
+    .admin-nav-sep{ display:none; }
+    .admin-nav-btn{ width:auto; }
   }
 </style>
 </head>
@@ -448,15 +410,12 @@
         </div>
         <div class="sum-row"><span>عدد القطع</span><span class="nums" id="itemCount">0</span></div>
         <div class="sum-row"><span>المجموع الفرعي</span><span class="nums" id="subTotalDisplay">0 د.م</span></div>
-
         <div class="overall-discount-row">
           <label for="overallDiscountInput">نسبة تخفيض على المجموع</label>
           <input type="number" id="overallDiscountInput" class="nums" min="0" max="100" value="0" oninput="setOverallDiscount(this.value)">
         </div>
-
         <div class="sum-row discount-amount-row" id="discountAmountRow" style="display:none;"><span>قيمة التخفيض</span><span class="nums" id="discountAmountDisplay">0 د.م</span></div>
         <div class="sum-row total"><span>المجموع النهائي</span><span class="nums" id="orderTotal">0 د.م</span></div>
-
         <button class="btn btn-primary" id="finishSaleBtn" onclick="finishSale()" disabled>إنهاء البيع</button>
         <button class="btn btn-outline" id="quoteBtn" onclick="generateQuote()" disabled style="width:100%;margin-top:8px;">📋 تسعيرة فقط (بدون بيع)</button>
       </div>
@@ -465,8 +424,6 @@
 
   <div class="main-split" id="adminTab" style="display:none;">
     <div class="admin-shell">
-
-      <!-- ===== القائمة الجانبية: كل قسم من الإدارة فبلاصتو، ماشي مكوم فسكرول واحد ===== -->
       <div class="admin-sidebar">
         <div class="admin-sidebar-head">
           <h2>⚙️ الإدارة</h2>
@@ -480,21 +437,16 @@
           <button class="admin-nav-btn" data-view="byuser" onclick="showAdminSub('byuser')"><span class="anb-label">👤 المبيعات حسب المستخدم</span></button>
           <button class="admin-nav-btn" data-view="movements" onclick="showAdminSub('movements')"><span class="anb-label">📜 سجل الحركة</span></button>
           <button class="admin-nav-btn" data-view="archive" onclick="showAdminSub('archive')"><span class="anb-label">📦 الأرشيف</span></button>
-
           <div class="admin-nav-group-label">الإدارة</div>
           <button class="admin-nav-btn" data-view="products" onclick="showAdminSub('products')"><span class="anb-label">🗂️ المنتوجات</span></button>
           <button class="admin-nav-btn" data-view="users" onclick="showAdminSub('users')"><span class="anb-label">👥 المستخدمون</span></button>
-
           <div class="admin-nav-sep"></div>
           <button class="admin-nav-btn" data-view="stock" onclick="showAdminSub('stock')"><span class="anb-label">⚠️ تنبيهات المخزون</span><span class="badge-count" id="stockBadgeCount">0</span></button>
           <button class="admin-nav-btn" data-view="orders" onclick="showAdminSub('orders')"><span class="anb-label">📝 الطلبيات</span><span class="badge-count" id="ordersBadgeCount">0</span></button>
         </nav>
       </div>
 
-      <!-- ===== محتوى الصفحة المختارة ===== -->
       <div class="admin-content-scroll">
-
-        <!-- نظرة عامة -->
         <div id="adminOverviewView">
           <div class="section-head">
             <h2 style="margin:0;">📊 نظرة عامة</h2>
@@ -503,7 +455,6 @@
           <div class="stat-grid" id="statGrid"></div>
         </div>
 
-        <!-- سجل المبيعات -->
         <div id="adminSalesView" style="display:none;">
           <div class="admin-page-head"><h2>🧾 سجل المبيعات</h2></div>
           <div class="date-range-bar">
@@ -527,7 +478,6 @@
           <div class="table-wrap"><table id="salesTable"></table></div>
         </div>
 
-        <!-- سجل الفواتير -->
         <div id="adminInvoicesView" style="display:none;">
           <div class="admin-page-head">
             <h2>📄 سجل الفواتير</h2>
@@ -539,19 +489,16 @@
           <div class="table-wrap"><table id="invoicesTable"></table></div>
         </div>
 
-        <!-- المبيعات حسب المستخدم -->
         <div id="adminByUserView" style="display:none;">
           <div class="admin-page-head"><h2>👤 المبيعات حسب المستخدم</h2></div>
           <div class="table-wrap"><table id="salesByUserTable"></table></div>
         </div>
 
-        <!-- سجل الحركة -->
         <div id="adminMovementsView" style="display:none;">
           <div class="admin-page-head"><h2>📜 سجل الحركة</h2></div>
           <div class="table-wrap"><table id="movementsTable"></table></div>
         </div>
 
-        <!-- الأرشيف -->
         <div id="adminArchiveView" style="display:none;">
           <div class="admin-page-head">
             <h2>📦 أرشيف الحسابات المصفرة</h2>
@@ -560,7 +507,6 @@
           <div id="archiveWrap"></div>
         </div>
 
-        <!-- المنتوجات -->
         <div id="adminProductsView" style="display:none;">
           <div class="section-head">
             <h2 style="margin:0;">🗂️ إدارة المنتوجات</h2>
@@ -572,7 +518,6 @@
           <div class="table-wrap"><table id="productsTable"></table></div>
         </div>
 
-        <!-- المستخدمون -->
         <div id="adminUsersView" style="display:none;">
           <div class="section-head">
             <h2 style="margin:0;">👥 إدارة المستخدمين</h2>
@@ -582,7 +527,6 @@
           <div class="table-wrap"><table id="usersTable"></table></div>
         </div>
 
-        <!-- تنبيهات المخزون -->
         <div id="adminStockView" style="display:none;">
           <div class="stock-page-head">
             <h2>⚠️ المنتوجات في طريقها للنفاد</h2>
@@ -591,7 +535,6 @@
           <div id="lowStockAlertWrap"></div>
         </div>
 
-        <!-- الطلبيات -->
         <div id="adminOrdersView" style="display:none;">
           <div class="stock-page-head">
             <h2>📝 الطلبيات</h2>
@@ -610,7 +553,6 @@
 
 </div>
 
-<!-- User Form Modal (admin) -->
 <div class="overlay" id="userFormOverlay">
   <div class="modal-box">
     <div class="drawer-head">
@@ -632,7 +574,6 @@
   </div>
 </div>
 
-<!-- Product Form Modal -->
 <div class="overlay" id="productFormOverlay">
   <div class="modal-box">
     <div class="drawer-head">
@@ -679,7 +620,6 @@
   </div>
 </div>
 
-<!-- Order Note (طلبية) Form Modal -->
 <div class="overlay" id="orderNoteFormOverlay">
   <div class="modal-box">
     <div class="drawer-head">
@@ -696,7 +636,6 @@
   </div>
 </div>
 
-<!-- Invoice Edit Modal -->
 <div class="overlay" id="invoiceEditOverlay">
   <div class="modal-box" style="width:min(560px,94vw);">
     <div class="drawer-head">
@@ -707,13 +646,11 @@
       <div class="field"><label>اسم العميل</label><input type="text" id="ieCustomerName" placeholder="اسم العميل (اختياري)"></div>
       <div class="field"><label>رقم الهاتف</label><input type="text" id="ieCustomerPhone" class="nums" placeholder="رقم الهاتف (اختياري)"></div>
     </div>
-
     <div class="ie-add-product-wrap">
       <button type="button" class="btn btn-outline" style="width:100%;" onclick="toggleIeAddProduct()">➕ إضافة منتوج جديد</button>
       <input type="text" id="ieAddProductSearch" placeholder="ابحث بالاسم أو الباركود..." style="display:none;margin-top:8px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--paper-deep);font-family:'Tajawal';font-size:14px;" oninput="renderIeAddResults()">
       <div class="ie-add-results" id="ieAddResults"></div>
     </div>
-
     <div id="ieItemsList"></div>
     <div class="overall-discount-row" style="margin-top:10px;">
       <label for="ieOverallDiscount">نسبة تخفيض على المجموع</label>
@@ -729,7 +666,6 @@
   </div>
 </div>
 
-<!-- Invoice Lookup Modal (search by invoice number, available to cashier & admin) -->
 <div class="overlay" id="invoiceLookupOverlay">
   <div class="modal-box">
     <div class="drawer-head">
@@ -747,7 +683,6 @@
   </div>
 </div>
 
-<!-- Receipt Modal -->
 <div class="overlay" id="receiptOverlay">
   <div class="modal-box">
     <div class="drawer-head">
@@ -768,8 +703,6 @@
 <script type="module">
   /* ============================================================
      ⚠️ إعدادات Firebase — لازم تبدلها بالمعطيات ديالك ⚠️
-     كيفاش نجيبها: Firebase Console > Project settings (⚙️) >
-     Your apps > التطبيق ويب (</>) > firebaseConfig
      ============================================================ */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -792,8 +725,6 @@
 
 <script>
 const CATEGORIES = ["الكل","كتب","أقلام","أدوات مكتبية","قرطاسية"];
-
-// خانات خاصة بفئتي "كتب" و"قرطاسية": نوع المدرسة والمستوى الدراسي حتى الباكلوريا
 const SCHOOL_TYPES = ["غير محدد","عمومي","خصوصي","كلاهما"];
 const SCHOOL_LEVELS = [
   "غير محدد",
@@ -805,34 +736,29 @@ const SCHOOL_LEVELS = [
 
 let products = [];
 let sales = [];
-let quotes = []; // تسعيرات محفوظة (بدون بيع) — كتبقى ليها سجل بحالها بحال الفواتير، ولكن ماتأثرش على المخزون
-let archivedSales = []; // batches of sales tucked away here whenever "تصفير الحسابات" is used, so nothing is lost
+let quotes = [];
+let archivedSales = [];
 let movements = [];
 let users = [];
-let orderNotes = []; // لائحة "الطلبيات" — ملاحظات حرة بأشياء خاص نتقدا (نشريو) لتجديد المخزون
+let orderNotes = [];
 let currentUser = null;
-let order = {}; // {productId: qty}
-let orderDiscount = {}; // {productId: percent 0-100} discount applied per product line
-let orderNameOverride = {}; // {productId: customName} تعديل يدوي لاسم المنتوج فهاد الطلبية فقط
-let orderPriceOverride = {}; // {productId: customPrice} تعديل يدوي لثمن المنتوج فهاد الطلبية فقط
-let overallDiscountPercent = 0; // discount percent applied on the whole order subtotal
+let order = {};
+let orderDiscount = {};
+let orderNameOverride = {};
+let orderPriceOverride = {};
+let overallDiscountPercent = 0;
 let activeCategory = "الكل";
 let searchTerm = "";
-let bookSchoolFilter = "الكل"; // active filter for "نوع المدرسة" — only relevant when activeCategory === "كتب"
-let bookLevelFilter = "الكل";  // active filter for "المستوى الدراسي" — only relevant when activeCategory === "كتب"
+let bookSchoolFilter = "الكل";
+let bookLevelFilter = "الكل";
 let isAdmin = false;
 let lastReceiptData = null;
-let adminSubView = 'overview'; // controls which admin sidebar page is visible: overview | sales | invoices | byuser | movements | archive | products | users | stock | orders
+let adminSubView = 'overview';
 
-// ترتيب عرض الفئات فجدول "إدارة المنتوجات": كل فئة فمجموعة بحالها
 const PRODUCT_CATEGORY_ORDER = ["كتب","أقلام","أدوات مكتبية","قرطاسية"];
-const ADMIN_PRODUCTS_PAGE_SIZE = 10; // عدد المنتوجات المعروضة فكل فئة قبل الضغط على "عرض المزيد"
-let adminCatLimit = {}; // {categoryName: عدد المنتوجات المعروضة حاليا فهاذ الفئة}
-// IDs changed on this device but not yet reflected by Firebase.  A late
-// Firestore snapshot must never erase one of these products from the screen.
-const pendingProductIds = new Set();
+const ADMIN_PRODUCTS_PAGE_SIZE = 10;
+let adminCatLimit = {};
 
-// الفئات لي فيهم خانتا "نوع المدرسة" و"المستوى الدراسي": الكتب والقرطاسية
 function isSchoolCategory(cat){ return cat === 'كتب' || cat === 'قرطاسية'; }
 
 const defaultUsers = [
@@ -856,15 +782,14 @@ const defaultProducts = [
   {id:"p14", name:"طقم أقلام تخطيط فاخر", category:"أقلام", icon:"🖋️", price:95, stock:1, threshold:3, barcode:"611234500141"},
 ];
 
-// نسخة احتياطية محلية: كتخلي الإضافة خدامة حتى إلى كان اتصال Firebase
-// مقطوع أو كانت إعدادات المشروع مازال ما تكمّلاتش.
 const LOCAL_BACKUP_KEY = 'manar-pos-backup-v1';
 function saveLocalBackup(){
   try{
     localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify({
       products, sales, quotes, archivedSales, movements, users, orderNotes
     }));
-  }catch(e){ console.warn('Local backup failed:', e); }
+    return true;
+  }catch(e){ console.warn('Local backup failed:', e); return false; }
 }
 function restoreLocalBackup(){
   try{
@@ -886,15 +811,14 @@ function restoreLocalBackup(){
   }
 }
 
+users = defaultUsers.slice();
+
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
-
-// seed with default admin so login works instantly even before Firestore responds
-users = defaultUsers.slice();
 
 function trySiteLogin(){
   const username = document.getElementById('gateUser').value.trim();
@@ -907,6 +831,9 @@ function trySiteLogin(){
     document.getElementById('currentUserBadge').textContent = `👤 ${found.name} (${found.role==='admin'?'مدير':'كاشير'})`;
     document.getElementById('adminTabBtn').style.display = isAdmin ? 'flex' : 'none';
     document.getElementById('gateError').style.display = 'none';
+    renderProducts();
+    renderOrder();
+    if(isAdmin) renderAdmin();
   }else{
     document.getElementById('gateError').style.display = 'block';
   }
@@ -932,21 +859,33 @@ function updateClock(){
 setInterval(updateClock, 1000); updateClock();
 
 async function loadData(){
-  const { getDoc, setDoc, onSnapshot, storeRef } = window.__fb;
+  const { getDoc, setDoc, storeRef } = window.__fb;
+  
+  // ✅ أولاً: نحمل البيانات المحلية
+  const hasLocal = restoreLocalBackup();
+  
   try{
     const snap = await getDoc(storeRef);
     if(snap.exists()){
       const data = snap.data();
-      products = data.products || defaultProducts;
-      sales = data.sales || [];
-      quotes = data.quotes || [];
-      archivedSales = data.archivedSales || [];
-      movements = data.movements || [];
-      users = (data.users && data.users.length) ? data.users : defaultUsers;
-      orderNotes = data.orderNotes || [];
+      
+      // ✅ دمج البيانات: المحلي + السحابي
+      const localIds = new Set(products.map(p => p.id));
+      const remoteProducts = data.products || [];
+      const newProducts = remoteProducts.filter(p => !localIds.has(p.id));
+      products = [...products, ...newProducts];
+      
+      // ✅ دمج باقي البيانات
+      if(data.sales) sales = data.sales;
+      if(data.quotes) quotes = data.quotes;
+      if(data.archivedSales) archivedSales = data.archivedSales;
+      if(data.movements) movements = data.movements;
+      if(data.users && data.users.length) users = data.users;
+      if(data.orderNotes) orderNotes = data.orderNotes;
+      
       saveLocalBackup();
       if(!data.users || !data.users.length){
-        await setDoc(storeRef, {users}, {merge:true});
+        await setDoc(storeRef, {users: defaultUsers}, {merge:true});
       }
     }else{
       products = defaultProducts;
@@ -960,8 +899,8 @@ async function loadData(){
       saveLocalBackup();
     }
   }catch(e){
-    console.error(e);
-    if(!restoreLocalBackup()){
+    console.error('Firebase error:', e);
+    if(!hasLocal){
       products = defaultProducts;
       sales = [];
       quotes = [];
@@ -970,7 +909,7 @@ async function loadData(){
       saveLocalBackup();
     }
     const statusEl = document.getElementById('syncStatus');
-    statusEl.textContent = '⚠️ تحقق من إعدادات Firebase';
+    statusEl.textContent = '⚠️ وضع غير متصل (المحلي فقط)';
     statusEl.classList.add('offline');
   }
 
@@ -980,9 +919,6 @@ async function loadData(){
   listenRealtime();
 }
 
-/* ===== Multi-device real-time sync via Firebase Firestore =====
-   Any change (new sale, stock update, product edit) from ANY device
-   is pushed instantly here, without touching this device's in-progress order. */
 function listenRealtime(){
   const { onSnapshot, storeRef } = window.__fb;
   onSnapshot(storeRef, (snap)=>{
@@ -990,16 +926,9 @@ function listenRealtime(){
     const data = snap.data();
     if(data.products){
       const remoteProducts = data.products;
-      const remoteIds = new Set(remoteProducts.map(p=>p.id));
-      // Keep only unsynchronised local products that are absent from this
-      // snapshot.  This prevents the common "added then disappeared" issue
-      // caused by an older initial snapshot arriving after the click.
-      const pendingLocalProducts = products.filter(p=>
-        pendingProductIds.has(p.id) && !remoteIds.has(p.id)
-      );
-      products = [...remoteProducts, ...pendingLocalProducts];
-      // When Firebase contains a pending product, it has reached the cloud.
-      remoteIds.forEach(id=>pendingProductIds.delete(id));
+      const localIds = new Set(products.map(p=>p.id));
+      const newProducts = remoteProducts.filter(p=>!localIds.has(p.id));
+      products = [...products, ...newProducts];
     }
     if(data.sales) sales = data.sales;
     if(data.quotes) quotes = data.quotes;
@@ -1012,64 +941,70 @@ function listenRealtime(){
     renderOrder();
     if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
     const statusEl = document.getElementById('syncStatus');
-    statusEl.textContent = '🔗 متصل ومتزامن (Firebase)';
+    statusEl.textContent = '🔗 متصل ومتزامن';
     statusEl.classList.remove('offline');
   }, (err)=>{
-    console.error(err);
+    console.error('Realtime sync error:', err);
     const statusEl = document.getElementById('syncStatus');
-    statusEl.textContent = '⚠️ تعذر الاتصال بـ Firebase';
+    statusEl.textContent = '⚠️ غير متصل (المحلي فقط)';
     statusEl.classList.add('offline');
   });
 }
-function manualSync(){ showToast('المزامنة تلقائية ومباشرة عبر Firebase ✅'); }
+function manualSync(){ showToast('✅ المزامنة تلقائية'); }
 
 async function persistProducts(){
-  const { setDoc, storeRef } = window.__fb;
+  saveLocalBackup();
   try{
-    await setDoc(storeRef, {products, sales, movements, users}, {merge:true});
-    saveLocalBackup();
+    const { setDoc, storeRef } = window.__fb;
+    await setDoc(storeRef, { products, sales, movements, users }, { merge: true });
     return 'cloud';
   }catch(e){
-    // Do not pretend the product was saved.  The caller needs this result to
-    // keep the form open and restore the UI if Firestore rejects the write.
     console.error('Firebase product save failed:', e);
-    // The cashier can keep working on this device.  The next successful
-    // Firebase connection will be needed to share these changes with others.
-    saveLocalBackup();
-    showToast('تحفظ المنتوج فهاد الجهاز؛ تعذرت المزامنة مع Firebase');
+    showToast('⚠️ حفظ محلياً فقط (مشكلة في الاتصال)');
     return 'local';
   }
 }
 async function persistSales(){
-  const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); }
+  saveLocalBackup();
+  try{
+    const { setDoc, storeRef } = window.__fb;
+    await setDoc(storeRef, { products, sales, movements, users }, { merge: true });
+  }catch(e){ console.warn('persistSales error:', e); }
 }
 async function persistQuotes(){
-  const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {quotes, movements}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ التسعيرة — تحقق من إعدادات Firebase'); }
+  saveLocalBackup();
+  try{
+    const { setDoc, storeRef } = window.__fb;
+    await setDoc(storeRef, { quotes, movements }, { merge: true });
+  }catch(e){ console.warn('persistQuotes error:', e); }
 }
 async function persistUsers(){
-  const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {users}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); }
+  saveLocalBackup();
+  try{
+    const { setDoc, storeRef } = window.__fb;
+    await setDoc(storeRef, { users }, { merge: true });
+  }catch(e){ console.warn('persistUsers error:', e); }
 }
 async function persistArchive(){
-  const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); }
+  saveLocalBackup();
+  try{
+    const { setDoc, storeRef } = window.__fb;
+    await setDoc(storeRef, { sales, archivedSales, movements }, { merge: true });
+  }catch(e){ console.warn('persistArchive error:', e); }
 }
 async function persistOrderNotes(){
-  const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {orderNotes}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ الطلبية — تحقق من إعدادات Firebase'); }
+  saveLocalBackup();
+  try{
+    const { setDoc, storeRef } = window.__fb;
+    await setDoc(storeRef, { orderNotes }, { merge: true });
+  }catch(e){ console.warn('persistOrderNotes error:', e); }
 }
-// used when converting a quote to a final sale: touches products, sales AND quotes together
 async function persistConvert(){
-  const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {products, sales, quotes, movements}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ التحويل — تحقق من إعدادات Firebase'); }
+  saveLocalBackup();
+  try{
+    const { setDoc, storeRef } = window.__fb;
+    await setDoc(storeRef, { products, sales, quotes, movements }, { merge: true });
+  }catch(e){ console.warn('persistConvert error:', e); }
 }
 function addMovement(type, description){
   movements.unshift({
@@ -1079,7 +1014,6 @@ function addMovement(type, description){
   });
 }
 
-/* ===== Tabs ===== */
 function showTab(tab){
   if(tab==='admin' && !isAdmin){
     showToast('هذا القسم خاص بالمدير فقط');
@@ -1092,7 +1026,6 @@ function showTab(tab){
   if(tab==='admin') renderAdmin();
 }
 
-/* ===== Products / categories ===== */
 function renderCategories(){
   document.getElementById('categoryRow').innerHTML = CATEGORIES.map(c=>
     `<div class="cat-chip ${c===activeCategory?'active':''}" onclick="setCategory('${c}')">${c}</div>`
@@ -1105,7 +1038,6 @@ function setCategory(c){
   renderProducts();
 }
 
-// شريط فلترة إضافي (نوع المدرسة + المستوى) — كيبان غير كي تكون الفئة المفعّلة هي "كتب" أو "قرطاسية"
 function renderBookFilters(){
   const wrap = document.getElementById('bookFilterRow');
   if(!isSchoolCategory(activeCategory)){
@@ -1135,7 +1067,6 @@ function stockLabel(p){
   return `<span class="pstock">متوفر (${p.stock})</span>`;
 }
 
-// شارات صغيرة تبان فوق بطاقة المنتوج (نوع المدرسة + المستوى) إلا كانت محددة — للكتب والقرطاسية
 function bookTagsHtml(p){
   if(!isSchoolCategory(p.category)) return '';
   const hasSchool = p.schoolType && p.schoolType !== 'غير محدد';
@@ -1203,7 +1134,6 @@ document.getElementById('searchInput').addEventListener('input', e=>{
   renderProducts();
 });
 
-/* ===== Barcode scan (works with keyboard-wedge USB scanners) ===== */
 const barcodeInput = document.getElementById('barcodeInput');
 barcodeInput.addEventListener('keydown', e=>{
   if(e.key !== 'Enter') return;
@@ -1231,7 +1161,6 @@ function refocusScanner(){
 }
 document.addEventListener('click', ()=>{ setTimeout(refocusScanner, 50); });
 
-/* ===== Order (ticket) ===== */
 function addToOrder(id){
   const p = products.find(x=>x.id===id);
   if(!p || p.stock<=0) return;
@@ -1248,7 +1177,6 @@ function changeOrderQty(id, delta){
   else order[id]=q;
   renderOrder();
 }
-// تعديل الكمية مباشرة من خانة الإدخال فالكاشير
 function setLineQty(id, val){
   const p = products.find(x=>x.id===id);
   if(!p) return;
@@ -1258,7 +1186,6 @@ function setLineQty(id, val){
   order[id]=q;
   renderOrder();
 }
-// تعديل اسم المنتوج فهاد الطلبية فقط (ماكيبدلش اسم المنتوج الأصلي فالمخزون)
 function setLineName(id, val){
   const p = products.find(x=>x.id===id);
   if(!p) return;
@@ -1267,7 +1194,6 @@ function setLineName(id, val){
   else orderNameOverride[id] = v;
   renderOrder();
 }
-// تعديل ثمن المنتوج فهاد الطلبية فقط (ماكيبدلش ثمن المنتوج الأصلي فالمخزون)
 function setLinePrice(id, val){
   const p = products.find(x=>x.id===id);
   if(!p) return;
@@ -1314,7 +1240,6 @@ function setOverallDiscount(val){
   renderOrder();
 }
 
-// price of a single line AFTER its own per-product discount, BEFORE the overall discount
 function lineSubtotal(id){
   const p = products.find(x=>x.id===id);
   if(!p) return 0;
@@ -1323,11 +1248,9 @@ function lineSubtotal(id){
   const price = getLinePrice(id);
   return price*qty*(1-discount/100);
 }
-// sum of all lines after per-product discounts, before the overall discount
 function orderSubtotal(){
   return Object.keys(order).reduce((sum,id)=> sum + lineSubtotal(id), 0);
 }
-// final total after applying the overall discount on top of the subtotal
 function orderFinalTotal(){
   const subtotal = orderSubtotal();
   return subtotal*(1-overallDiscountPercent/100);
@@ -1395,10 +1318,6 @@ function renderOrder(){
   document.getElementById('quoteBtn').disabled = ids.length===0;
 }
 
-/* ===== Sale finalization ===== */
-
-// تسعيرة تقديرية: كتنحفظ فسجل خاص بيها (quotes)، بحال الفاتورة تماما (رقم، تاريخ، عميل، منتوجات...)
-// لكن ماكتأثرش على المخزون، وماكتدخلش فحسابات المبيعات/الإيرادات
 async function generateQuote(){
   const ids = Object.keys(order);
   if(ids.length===0) return;
@@ -1427,12 +1346,8 @@ async function generateQuote(){
   await persistQuotes();
   showQuote(quote);
   if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
-  // quotes are informational only: no stock change, no sale recorded, order stays as-is
-  // so the cashier can still finish the real sale afterwards if the customer agrees
 }
 
-// builds the small customer-info block shown under the invoice meta (date/cashier/etc)
-// on both the A4 layout and returns nothing if no customer info was entered
 function customerBlockHtml(customerName, customerPhone){
   if(!customerName && !customerPhone) return '';
   return `<div class="inv-customer">
@@ -1447,8 +1362,6 @@ function customerThermalLines(customerName, customerPhone){
   return lines;
 }
 
-// isReprint=true means we're re-opening a previously saved quote from the log
-// (not generating a fresh one), so the modal title reflects that
 function showQuote(quote, isReprint){
   document.getElementById('receiptModalTitle').textContent = isReprint ? '🧾 نسخة من التسعيرة' : '📋 تسعيرة (بدون بيع)';
   document.getElementById('receiptCloseBtn').textContent = 'إغلاق';
@@ -1546,8 +1459,6 @@ async function finishSale(){
   renderOrder();
 }
 
-// isReprint=true means we're just re-opening an old invoice from the log/archive
-// (not finishing a fresh sale), so the modal title/button reflect that instead
 function showReceipt(sale, isReprint){
   document.getElementById('receiptModalTitle').textContent = isReprint ? '🧾 نسخة من الفاتورة' : 'تم البيع ✅';
   document.getElementById('receiptCloseBtn').textContent = isReprint ? 'إغلاق' : 'بيع جديد';
@@ -1601,9 +1512,6 @@ function showReceipt(sale, isReprint){
 }
 function closeReceipt(){ document.getElementById('receiptOverlay').classList.remove('show'); }
 
-// builds the narrow 80mm thermal-printer version of an invoice/quote, kept hidden
-// (display:none) inside #printArea alongside the A4 version; printReceipt() decides
-// which one becomes visible right before calling window.print()
 function buildThermalHtml(opts){
   const {title, metaLines, items, subtotal, overallDiscountPercent, total, footer, noteText} = opts;
   const disc = overallDiscountPercent || 0;
@@ -1629,12 +1537,6 @@ function buildThermalHtml(opts){
   `;
 }
 
-// prints the currently-open receipt/quote/invoice in one of two paper formats.
-// A dynamic <style> tag is injected right before printing to pick the correct
-// @page size (A4 vs 80mm thermal roll) and to show/hide the matching template —
-// this also carries the fix for invoices being cut off when printed, since it
-// forces the modal wrapper to stop clipping overflow during print (see the
-// base @media print rules above).
 function printReceipt(mode){
   const old = document.getElementById('dynamicPrintStyle');
   if(old) old.remove();
@@ -1657,11 +1559,6 @@ function printReceipt(mode){
   setTimeout(()=>window.print(), 50);
 }
 
-// looks up a record by id in the live sales log, the live quotes log, AND every
-// archived sales batch (a sale never truly disappears: it's either in `sales` or
-// tucked inside `archivedSales`; a quote lives in `quotes`), so any invoice or
-// quote can always be re-opened, re-printed, edited, or deleted from here.
-// returns {sale, type:'live'|'quote'|'archive', index, batch?} or null
 function locateSale(id){
   let idx = sales.findIndex(s=>s.id===id);
   if(idx>-1) return {sale: sales[idx], type:'live', index: idx};
@@ -1677,9 +1574,6 @@ function findSaleById(id){
   const loc = locateSale(id);
   return loc ? loc.sale : null;
 }
-// every invoice AND every quote ever made, each kept as its own individual record —
-// whether still in the live "سجل المبيعات", in the live quotes log, or moved into an
-// archive batch by "تصفير الحسابات". nothing here is summarized or grouped: one row = one record, forever.
 function getAllInvoices(){
   const fromArchives = archivedSales.flatMap(batch=>batch.items);
   const all = sales.concat(quotes, fromArchives);
@@ -1718,7 +1612,6 @@ function viewInvoice(id){
   else showReceipt(sale, true);
 }
 
-/* ===== Invoice lookup (by invoice number) — available to cashier & admin from the topbar ===== */
 function openInvoiceLookup(){
   document.getElementById('invoiceLookupInput').value = '';
   document.getElementById('invoiceLookupResults').innerHTML = '';
@@ -1738,20 +1631,16 @@ function runInvoiceLookup(){
     resultsWrap.innerHTML = `<p style="color:var(--ink-soft);text-align:center;padding:10px;">دخل رقم الفاتورة باش نبحثو ليك عليها</p>`;
     return;
   }
-  // exact match on invoice number is the common case, but also allow a partial
-  // number search (in case the cashier only remembers part of it)
   const matches = getAllInvoices().filter(s => s.id.toLowerCase().includes(term));
   if(matches.length===0){
     resultsWrap.innerHTML = `<p style="color:var(--wine-deep);text-align:center;padding:10px;">ماكايناش فاتورة برقم "${document.getElementById('invoiceLookupInput').value.trim()}"</p>`;
     return;
   }
   if(matches.length===1){
-    // single exact/near match: open it directly
     closeInvoiceLookup();
     viewInvoice(matches[0].id);
     return;
   }
-  // multiple matches (partial number): let the cashier pick the right one
   resultsWrap.innerHTML = `
     <div class="table-wrap" style="margin-top:8px;">
       <table>
@@ -1771,12 +1660,6 @@ function runInvoiceLookup(){
     </div>`;
 }
 
-/* ===== Delete / edit invoices & quotes ===== */
-
-// deletes an invoice or quote permanently (from the live sales log, the live quotes
-// log, or from an archive batch). If it's a real sale, its items' quantities are
-// restored back into stock since the sale is being undone; quotes never touched
-// stock in the first place, so nothing is restored for them.
 async function deleteInvoice(id){
   const loc = locateSale(id);
   if(!loc){ showToast('ماكاينش هاذ السجل'); return; }
@@ -1817,13 +1700,7 @@ async function deleteInvoice(id){
   showToast(isQuote ? 'تم حذف التسعيرة' : 'تم حذف الفاتورة');
 }
 
-// ===== Convert a quote into a final sale =====
-// Takes a saved quote (docType 'quote'), checks stock availability for every item,
-// deducts stock, moves it out of `quotes` and into `sales` as a proper sale record
-// (keeping the same id/date/customer info so it stays traceable), logs the change,
-// and shows the resulting sale receipt.
 async function doConvertQuoteToSale(quote, quoteLoc){
-  // make sure stock still covers every item in the quote (stock may have moved since the quote was made)
   const shortages = [];
   quote.items.forEach(it=>{
     const p = products.find(x=> (it.id && x.id===it.id) || x.name===it.name);
@@ -1841,13 +1718,10 @@ async function doConvertQuoteToSale(quote, quoteLoc){
     if(p) p.stock -= it.qty;
   });
 
-  // turn the quote record itself into a sale record, keep its id/date so it stays traceable
   quote.docType = 'sale';
   quote.convertedFromQuote = true;
-  quote.date = quote.date; // keep original date; the "sale" now legally happened at conversion time in spirit, but we preserve history
   quote.convertedAt = new Date().toLocaleString('ar-MA');
 
-  // remove from quotes list, push into sales list
   if(quoteLoc.type==='quote'){
     quotes.splice(quoteLoc.index,1);
   }
@@ -1861,7 +1735,6 @@ async function doConvertQuoteToSale(quote, quoteLoc){
   return true;
 }
 
-// quick one-click convert straight from the invoices table
 async function quickConvertQuote(id){
   const loc = locateSale(id);
   if(!loc || (loc.sale.docType!=='quote')){ showToast('هاذ السجل ماشي تسعيرة'); return; }
@@ -1874,16 +1747,12 @@ async function quickConvertQuote(id){
   }
 }
 
-// convert button inside the edit-invoice modal (uses the CURRENT edited state:
-// saves the edit first, then converts, so any product added/removed/changed
-// during editing is what actually gets converted and deducted from stock)
 async function convertQuoteToSale(){
   if(!editingInvoiceId || !editingIsQuote){ return; }
   if(editingItems.length===0){ showToast('ما يمكنش تحول تسعيرة فارغة لبيع'); return; }
   const ok = confirm(`واش متأكد بغيتي تحول هاذ التسعيرة إلى بيع نهائي؟\nغادي يتسجل حفظ التعديلات أولا، من بعد غادي تنقص الكميات من المخزون.`);
   if(!ok) return;
 
-  // apply pending edits (items/discount/customer) onto the quote record first
   const loc = locateSale(editingInvoiceId);
   if(!loc){ showToast('تعذر إيجاد التسعيرة'); closeInvoiceEdit(); return; }
   const subtotal = ieSubtotalCalc();
@@ -1903,7 +1772,6 @@ async function convertQuoteToSale(){
   }
 }
 
-// ===== Invoice/quote edit modal state =====
 let editingInvoiceId = null;
 let editingItems = [];
 let editingOverallDiscount = 0;
@@ -1926,7 +1794,6 @@ function openInvoiceEdit(id){
   document.getElementById('ieCustomerPhone').value = loc.sale.customerPhone || '';
   document.getElementById('ieStockNote').style.display = editingIsQuote ? 'none' : 'block';
   document.getElementById('ieConvertRow').style.display = editingIsQuote ? 'block' : 'none';
-  // reset the "add product" picker each time the modal opens
   const addSearch = document.getElementById('ieAddProductSearch');
   addSearch.style.display = 'none';
   addSearch.value = '';
@@ -2004,7 +1871,6 @@ function renderInvoiceEditTotals(){
   document.getElementById('ieTotal').textContent = total.toFixed(2)+' د.م';
 }
 
-// ===== Add a NEW product to a quote/invoice while editing it =====
 function toggleIeAddProduct(){
   const search = document.getElementById('ieAddProductSearch');
   const results = document.getElementById('ieAddResults');
@@ -2025,7 +1891,7 @@ function renderIeAddResults(){
   if(term){
     list = products.filter(p=> p.name.toLowerCase().includes(term) || (p.barcode||'').includes(term));
   }
-  list = list.slice(0, 25); // keep the picker light
+  list = list.slice(0, 25);
   if(list.length===0){
     results.innerHTML = `<div class="ie-add-result-row" style="cursor:default;color:var(--ink-soft);">لا توجد نتائج</div>`;
     results.classList.add('show');
@@ -2042,10 +1908,6 @@ function renderIeAddResults(){
   `).join('');
   results.classList.add('show');
 }
-// adds the picked product to the currently-edited items list, or bumps its
-// quantity by 1 if it's already there. For a real sale/invoice (not a quote),
-// checks against remaining available stock (product.stock minus what's already
-// reserved for this same product within this edit session) before allowing it.
 function addProductToEditingInvoice(productId){
   const p = products.find(x=>x.id===productId);
   if(!p){ showToast('تعذر إيجاد المنتوج'); return; }
@@ -2066,10 +1928,6 @@ function addProductToEditingInvoice(productId){
   showToast(`✅ تمت إضافة ${p.name}`);
 }
 
-// saves edits to an existing invoice or quote: recomputes totals. For a real sale
-// (live or archived), also adjusts product stock by the DIFFERENCE between old and
-// new quantities. For a quote, stock is never touched since a quote never reserved
-// or removed stock in the first place. Logs the change in سجل الحركة either way.
 async function saveInvoiceEdit(){
   const loc = locateSale(editingInvoiceId);
   if(!loc){ showToast('تعذر إيجاد السجل'); closeInvoiceEdit(); return; }
@@ -2084,7 +1942,7 @@ async function saveInvoiceEdit(){
     editingItems.forEach(it=>{ newQtyMap[keyOf(it)] = (newQtyMap[keyOf(it)]||0) + it.qty; });
     const allKeys = new Set([...Object.keys(oldQtyMap), ...Object.keys(newQtyMap)]);
     allKeys.forEach(key=>{
-      const diff = (newQtyMap[key]||0) - (oldQtyMap[key]||0); // >0 means more stock must be taken out
+      const diff = (newQtyMap[key]||0) - (oldQtyMap[key]||0);
       if(diff !== 0){
         const p = products.find(x=>x.id===key || x.name===key);
         if(p){
@@ -2121,11 +1979,6 @@ async function saveInvoiceEdit(){
   showToast(editingIsQuote ? 'تم حفظ تعديلات التسعيرة' : 'تم حفظ تعديلات الفاتورة');
 }
 
-/* ===== Admin ===== */
-
-// switches between the admin sidebar pages (نظرة عامة، سجل المبيعات، سجل الفواتير،
-// المبيعات حسب المستخدم، سجل الحركة، الأرشيف، المنتوجات، المستخدمون، تنبيهات المخزون، الطلبيات)
-// so each section lives on its own separate screen instead of one long page
 const ADMIN_VIEWS = ['overview','sales','invoices','byuser','movements','archive','products','users','stock','orders'];
 function showAdminSub(view){
   adminSubView = view;
@@ -2139,8 +1992,6 @@ function showAdminSub(view){
   if(view==='orders') renderOrdersList();
 }
 
-// "تصفير الحسابات": zeroes out the live sales stats/counters shown in the dashboard,
-// but nothing is actually deleted — the current sales get tucked into an archive batch first
 async function resetAccountsToZero(){
   if(sales.length===0){ showToast('لا توجد بيانات مبيعات للتصفير حاليا'); return; }
   const total = sales.reduce((s,x)=>s+x.total,0);
@@ -2159,11 +2010,10 @@ async function resetAccountsToZero(){
   sales = [];
 
   await persistArchive();
-  clearSalesFilters(); // also re-renders admin
+  clearSalesFilters();
   showToast('تم تصفير الحسابات، والبيانات القديمة محفوظة في الأرشيف 📦');
 }
 
-// renders the read-only archive of past resets, each expandable to see its original sales
 function renderArchiveSection(){
   const wrap = document.getElementById('archiveWrap');
   if(!wrap) return;
@@ -2198,7 +2048,6 @@ function renderArchiveSection(){
   `).join('');
 }
 
-// ===== طلبيات (Orders / restock notes) =====
 function openOrderNoteForm(id){
   document.getElementById('orderNoteFormOverlay').classList.add('show');
   if(id){
@@ -2249,14 +2098,12 @@ async function deleteOrderNote(id){
   showToast('تم حذف الطلبية');
 }
 
-// downloads a single order note as a small .txt file
 function downloadOrderNote(id){
   const n = orderNotes.find(x=>x.id===id);
   if(!n) return;
   const content = `مكتبة منار — طلبية\n${n.title?('العنوان: '+n.title+'\n'):''}التاريخ: ${n.date}\n${n.createdBy?('بواسطة: '+n.createdBy+'\n'):''}\n----------------------------\n${n.text}\n`;
   triggerTextDownload(content, `طلبية-${n.id}.txt`);
 }
-// downloads ALL order notes combined into one .txt file
 function downloadAllOrders(){
   if(orderNotes.length===0){ showToast('لا توجد طلبيات لتنزيلها'); return; }
   let content = `مكتبة منار — كل الطلبيات\nتاريخ التصدير: ${new Date().toLocaleString('ar-MA')}\n============================\n\n`;
@@ -2300,8 +2147,6 @@ function renderOrdersList(){
   `).join('');
 }
 
-// كيبني جدول المنتوجات مقسم حسب الفئة (كل فئة بمجموعة بحالها برأسها)،
-// وكل فئة كتبان منها غير أول 10 منتوجات مع زر "عرض المزيد" إلا كان فيها كثر
 function renderProductsTableGrouped(list, adminSearchTerm){
   if(list.length===0){
     return `<thead><tr><th>المنتوج</th><th>الباركود</th><th>الفئة</th><th>نوع المدرسة</th><th>المستوى</th><th>السعر</th><th>المخزون</th><th></th></tr></thead>
@@ -2311,7 +2156,6 @@ function renderProductsTableGrouped(list, adminSearchTerm){
       </td></tr></tbody>`;
   }
 
-  // كل الفئات الموجودة فعلا فاللائحة، بترتيب PRODUCT_CATEGORY_ORDER أولا، وأي فئة زائدة فالآخر
   const presentCats = [...new Set(list.map(p=>p.category))];
   const orderedCats = [
     ...PRODUCT_CATEGORY_ORDER.filter(c=>presentCats.includes(c)),
@@ -2376,14 +2220,11 @@ function renderAdmin(){
     <div class="stat-card" style="border-color:var(--ink-soft);cursor:pointer;" onclick="showAdminSub('orders')"><div class="num nums">${orderNotes.length}</div><div class="lbl">عدد الطلبيات المحفوظة (اضغط للتفاصيل)</div></div>
   `;
 
-  // badge on the sub-tab button that opens the separate low-stock page
   const stockBadge = document.getElementById('stockBadgeCount');
   if(stockBadge) stockBadge.textContent = lowStock.length;
   const ordersBadge = document.getElementById('ordersBadgeCount');
   if(ordersBadge) ordersBadge.textContent = orderNotes.length;
 
-  // low-stock products now live only on their own separate sub-page (adminStockView),
-  // not mixed into the main reports page
   const alertWrap = document.getElementById('lowStockAlertWrap');
   alertWrap.innerHTML = lowStock.length===0 ? `
     <div class="alert-box" style="text-align:center;border-color:var(--green-ok);background:#EAF4EC;">
@@ -2420,7 +2261,6 @@ function renderAdmin(){
       </tr>`).join('')}
     </tbody>`;
 
-  // barcode/name search — helps find a product fast, or spot that it doesn't exist yet so it can be added quickly
   const adminSearchEl = document.getElementById('adminProductSearch');
   const adminSearchTerm = adminSearchEl ? adminSearchEl.value.trim().toLowerCase() : '';
   const filteredProducts = adminSearchTerm ? products.filter(p=>
@@ -2429,7 +2269,6 @@ function renderAdmin(){
 
   document.getElementById('productsTable').innerHTML = renderProductsTableGrouped(filteredProducts, adminSearchTerm);
 
-  // Sales grouped by cashier
   const byUser = {};
   sales.forEach(s=>{
     const key = s.cashierUsername || 'غير معروف';
@@ -2448,7 +2287,6 @@ function renderAdmin(){
         </tr>`).join('')}
     </tbody>`;
 
-  // populate cashier filter dropdown (keep current selection)
   const filterEl = document.getElementById('salesUserFilter');
   const currentFilter = filterEl.value;
   const uniqueUsers = [...new Set(sales.map(s=>s.cashierUsername).filter(Boolean))];
@@ -2513,10 +2351,10 @@ function renderAdmin(){
   renderInvoicesTable();
   if(adminSubView==='orders') renderOrdersList();
 }
-// combines the cashier filter with the "from date" / "to date" range filter for the sales log
+
 function getFilteredSales(){
   const cashierFilter = document.getElementById('salesUserFilter').value;
-  const fromVal = document.getElementById('salesFromDate').value; // "YYYY-MM-DD" or ""
+  const fromVal = document.getElementById('salesFromDate').value;
   const toVal = document.getElementById('salesToDate').value;
 
   const fromTime = fromVal ? new Date(fromVal + 'T00:00:00').getTime() : null;
@@ -2525,7 +2363,6 @@ function getFilteredSales(){
   return sales.filter(s=>{
     if(cashierFilter && s.cashierUsername !== cashierFilter) return false;
     if(fromTime!=null || toTime!=null){
-      // older sales recorded before this feature may not have a raw timestamp; fall back to now so they aren't silently dropped
       const t = s.timestamp!=null ? s.timestamp : Date.now();
       if(fromTime!=null && t < fromTime) return false;
       if(toTime!=null && t > toTime) return false;
@@ -2538,10 +2375,6 @@ function clearSalesFilters(){
   document.getElementById('salesToDate').value = '';
   document.getElementById('salesUserFilter').value = '';
   renderAdmin();
-}
-
-function isSameDay(dateStr){
-  return dateStr.split('،')[0] === new Date().toLocaleDateString('ar-MA');
 }
 
 function openUserForm(id){
@@ -2600,7 +2433,6 @@ async function deleteUser(id){
 }
 
 function generateBarcode(){
-  // 12-digit random code, avoiding collisions with existing products
   let code;
   do{
     code = '6' + Math.floor(100000000000 + Math.random()*899999999999).toString().slice(0,11);
@@ -2608,7 +2440,6 @@ function generateBarcode(){
   document.getElementById('pfBarcode').value = code;
 }
 
-// خانتا "نوع المدرسة" و"المستوى الدراسي" كتبانو غير كي تكون الفئة المختارة هي "كتب" أو "قرطاسية"
 function toggleBookFields(){
   const cat = document.getElementById('pfCategory').value;
   const wrap = document.getElementById('bookFieldsWrap');
@@ -2667,17 +2498,16 @@ async function saveProduct(){
   const threshold = parseInt(document.getElementById('pfThreshold').value);
   const schoolType = isSchoolCategory(category) ? document.getElementById('pfSchoolType').value : 'غير محدد';
   const level = isSchoolCategory(category) ? document.getElementById('pfLevel').value : 'غير محدد';
-  if(!name||isNaN(price)||isNaN(stock)||isNaN(threshold)){ showToast('عمر جميع الحقول بشكل صحيح'); return; }
+  
+  if(!name||isNaN(price)||isNaN(stock)||isNaN(threshold)){ 
+    showToast('عمر جميع الحقول بشكل صحيح'); 
+    return; 
+  }
+  
   if(barcode && products.some(p=>p.barcode===barcode && p.id!==id)){
     showToast('هذا الباركود مستعمل من طرف منتوج آخر');
     return;
   }
-
-  // Keep a copy before changing the local state.  If Firebase rejects the
-  // write (usually because of Firestore Rules), the product must not appear
-  // added only temporarily and then disappear on the next sync.
-  const productsBeforeSave = structuredClone(products);
-  const movementsBeforeSave = structuredClone(movements);
 
   let changedProductId = id;
   if(id){
@@ -2694,22 +2524,20 @@ async function saveProduct(){
     addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
   }
 
-  pendingProductIds.add(changedProductId);
   const saved = await persistProducts();
-  if(!saved){
-    products = productsBeforeSave;
-    movements = movementsBeforeSave;
-    renderAdmin(); renderProducts(); renderCategories();
-    showToast('ما تحفظش المنتوج: تحقق من صلاحيات Firebase أو الاتصال');
-    return;
-  }
-
-  if(saved==='cloud') pendingProductIds.delete(changedProductId);
-
+  
   toggleProductForm(false);
-  renderAdmin(); renderProducts(); renderCategories();
-  showToast('تم حفظ المنتوج');
+  renderAdmin(); 
+  renderProducts(); 
+  renderCategories();
+  
+  if(saved === 'cloud'){
+    showToast('✅ تم حفظ المنتوج بنجاح');
+  }else{
+    showToast('⚠️ تم حفظ المنتوج محلياً (مشكلة في المزامنة)');
+  }
 }
+
 async function deleteProduct(id){
   if(!confirm('واش متأكد من حذف هذا المنتوج؟')) return;
   const p = products.find(x=>x.id===id);
@@ -2720,14 +2548,34 @@ async function deleteProduct(id){
   showToast('تم حذف المنتوج');
 }
 
-// النقر خارج نافذة "إضافة/تعديل منتوج" أو "إضافة/تعديل مستخدم" أو "تعديل الفاتورة" أو "الطلبية" ما كيسدهاش،
-// باش ما تضيعش المعلومات لي دخلتيها بالغلط بضغطة برا. التسدّ غير بزر ✕ أو بعد الحفظ.
 const OVERLAYS_NO_OUTSIDE_CLOSE = ['receiptOverlay', 'productFormOverlay', 'userFormOverlay', 'invoiceEditOverlay', 'invoiceLookupOverlay', 'orderNoteFormOverlay'];
 document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click', e=>{ if(e.target===ov && !OVERLAYS_NO_OUTSIDE_CLOSE.includes(ov.id)) ov.classList.remove('show'); });
 });
 
-if(window.__fb){ loadData(); } else { window.addEventListener('fb-ready', loadData); }
+// ✅ تهيئة التطبيق
+async function initApp(){
+  // نضبط المستخدمين الافتراضيين
+  users = defaultUsers.slice();
+  
+  // نحاول نرجع البيانات المحلية أولاً
+  const hasLocal = restoreLocalBackup();
+  if(hasLocal){
+    console.log('✅ تم تحميل البيانات المحلية');
+    renderCategories();
+    renderProducts();
+    renderOrder();
+  }
+  
+  // ثم نحمّل من Firebase إذا كان متاح
+  await loadData();
+}
+
+if(window.__fb){ 
+  initApp(); 
+} else { 
+  window.addEventListener('fb-ready', initApp); 
+}
 </script>
 </body>
 </html>
