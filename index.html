@@ -505,7 +505,10 @@
         <div id="adminOverviewView">
           <div class="section-head">
             <h2 style="margin:0;">📊 نظرة عامة</h2>
-            <button class="btn btn-danger-outline" style="width:auto;margin:0;" onclick="resetAccountsToZero()">🔄 تصفير الحسابات</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-danger-outline" style="width:auto;margin:0;background:#fff3cd;border-color:#e0a800;color:#7a5c00;" onclick="recoverFromBackup()">♻️ استرجاع النسخة القديمة (طوارئ)</button>
+              <button class="btn btn-danger-outline" style="width:auto;margin:0;" onclick="resetAccountsToZero()">🔄 تصفير الحسابات</button>
+            </div>
           </div>
           <div class="stat-grid" id="statGrid"></div>
         </div>
@@ -945,6 +948,11 @@ async function loadData(){
       // (لي كانت فيها كلشي مجمّع) باش ننقلو منها البيانات مرة وحدة (ترحيل تلقائي)، بلا ما تضيع حتى بلاصة
       const oldSnap = await getDoc(storeRef);
       const data = oldSnap.exists() ? oldSnap.data() : {};
+      if(!data.products || !data.products.length){
+        // تحذير واضح فـ Console: التطبيق غادي يستعمل منتوجات افتراضية لأن ماكانش لقى منتوجات حقيقية
+        // فالوثيقة القديمة. هاد الشي ماخصوش يوقع إلا كان التطبيق كيخدم لأول مرة بلا بيانات سابقة.
+        console.warn('⚠️ ماكانش لقاو منتوجات حقيقية فالوثيقة القديمة (qirtas_store/main). كيستعمل منتوجات افتراضية. إلا كنتي عارفة بلي عندك منتوجات محفوظة من قبل، وقفي دابا وتأكدي من Firebase Console قبل ما تكملي.');
+      }
       products = data.products || defaultProducts;
       sales = data.sales || [];
       quotes = data.quotes || [];
@@ -1133,6 +1141,73 @@ async function persistOrderNotes(){
   try{ await setDoc(refs.orderNotes, sanitizeForFirestore({orderNotes}), {merge:true}); return true; }
   catch(e){ console.error('persistOrderNotes failed:', e); showToast('تعذر حفظ الطلبية: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
+// ===== دالة استرجاع آمنة =====
+// كتقرا البيانات من الوثيقة القديمة "qirtas_store/main" (لي عمرها ما تبدلات ولا اتحيدات)
+// وكتبين ليك بالضبط شحال ديال المنتوجات/المبيعات لقات فيها، وكتسولك التأكيد قبل ما تبدل
+// بيها أي حاجة كاينة دابا فالوثائق الجديدة. خدميها من Console المتصفح (F12) بكتابة:
+//   recoverFromBackup()
+window.recoverFromBackup = async function(){
+  const { getDoc, setDoc, refs, storeRef } = window.__fb;
+  let oldSnap;
+  try{ oldSnap = await getDoc(storeRef); }
+  catch(e){ console.error('تعذر قراءة النسخة القديمة:', e); alert('تعذر قراءة النسخة القديمة (main). شوفي رسالة الخطأ فـ Console.'); return; }
+
+  if(!oldSnap.exists()){
+    console.error('ماكاينة حتى وثيقة "qirtas_store/main". ماكاينش شي حاجة نسترجعو منها.');
+    alert('ماكاينش نسخة قديمة نقدر نسترجعو منها 😕');
+    return;
+  }
+  const data = oldSnap.data();
+  const counts = {
+    'منتوجات': (data.products||[]).length,
+    'مبيعات': (data.sales||[]).length,
+    'تسعيرات': (data.quotes||[]).length,
+    'أرشيف': (data.archivedSales||[]).length,
+    'حركات': (data.movements||[]).length,
+    'مستخدمين': (data.users||[]).length,
+    'طلبيات': (data.orderNotes||[]).length,
+  };
+  console.log('لقينا فالنسخة القديمة (main):', counts);
+
+  if(!counts['منتوجات']){
+    alert('⚠️ الوثيقة القديمة (main) ماعندهاش حتى منتوج فيها. الاسترجاع من هنا ماغاديش يرجع ليك المنتوجات. شوفي مباشرة فـ Firebase Console واش الحقل products عامر فوثيقة main.');
+    return;
+  }
+
+  const msg = `لقينا فالنسخة القديمة:\n` +
+    Object.entries(counts).map(([k,v])=>`- ${k}: ${v}`).join('\n') +
+    `\n\nواش متأكدة بغيتي تسترجعي هاد البيانات وتبدلي بيها اللي كاين دابا فالوثائق الجديدة (products, sales...)؟`;
+  if(!confirm(msg)){ console.log('الاسترجاع تلغى.'); return; }
+
+  products = data.products || [];
+  sales = data.sales || [];
+  quotes = data.quotes || [];
+  archivedSales = data.archivedSales || [];
+  movements = data.movements || [];
+  users = (data.users && data.users.length) ? data.users : defaultUsers;
+  orderNotes = data.orderNotes || [];
+
+  try{
+    await Promise.all([
+      setDoc(refs.products, sanitizeForFirestore({products})),
+      setDoc(refs.sales, sanitizeForFirestore({sales})),
+      setDoc(refs.quotes, sanitizeForFirestore({quotes})),
+      setDoc(refs.archivedSales, sanitizeForFirestore({archivedSales})),
+      setDoc(refs.movements, sanitizeForFirestore({movements})),
+      setDoc(refs.users, sanitizeForFirestore({users})),
+      setDoc(refs.orderNotes, sanitizeForFirestore({orderNotes})),
+    ]);
+  }catch(e){
+    console.error('فشل الاسترجاع:', e);
+    alert('تعذر الاسترجاع: ' + describeFirestoreError(e, data));
+    return;
+  }
+  console.log('✅ تم الاسترجاع بنجاح:', counts);
+  renderCategories(); renderProducts(); renderOrder();
+  if(typeof renderAdmin === 'function' && isAdmin) renderAdmin();
+  alert('✅ تم استرجاع البيانات بنجاح! رجعي دابا شوفي القسم ديال المنتوجات.');
+};
+
 // used when converting a quote to a final sale: touches products, sales AND quotes together
 async function persistConvert(){
   const { setDoc, refs } = window.__fb;
