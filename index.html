@@ -106,6 +106,13 @@
   .pbtn .pbarcode{ font-size:10px; color:#B9B2A0; font-family:'IBM Plex Sans Arabic'; }
   .product-scroll{ flex:1; overflow-y:auto; padding-bottom:8px; }
   .pgrid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:10px; }
+  .pcard-wrap{ position:relative; }
+  .pcard-edit{
+    position:absolute; top:6px; left:6px; z-index:2; width:24px; height:24px; border-radius:50%;
+    background:#fff; border:1px solid var(--paper-deep); box-shadow:var(--shadow); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:12px; padding:0;
+  }
+  .pcard-edit:active{ transform:scale(0.92); }
   .pbtn{
     background:var(--panel); border:none; border-radius:var(--radius); box-shadow:var(--shadow);
     padding:12px; cursor:pointer; text-align:right; border-top:4px solid var(--wine);
@@ -828,9 +835,6 @@ let adminSubView = 'overview'; // controls which admin sidebar page is visible: 
 const PRODUCT_CATEGORY_ORDER = ["كتب","أقلام","أدوات مكتبية","قرطاسية"];
 const ADMIN_PRODUCTS_PAGE_SIZE = 10; // عدد المنتوجات المعروضة فكل فئة قبل الضغط على "عرض المزيد"
 let adminCatLimit = {}; // {categoryName: عدد المنتوجات المعروضة حاليا فهاذ الفئة}
-// IDs changed on this device but not yet reflected by Firebase.  A late
-// Firestore snapshot must never erase one of these products from the screen.
-const pendingProductIds = new Set();
 
 // الفئات لي فيهم خانتا "نوع المدرسة" و"المستوى الدراسي": الكتب والقرطاسية
 function isSchoolCategory(cat){ return cat === 'كتب' || cat === 'قرطاسية'; }
@@ -855,36 +859,6 @@ const defaultProducts = [
   {id:"p13", name:"رواية ذاكرة الجسد", category:"كتب", icon:"📕", price:60, stock:4, threshold:5, barcode:"611234500134", schoolType:"غير محدد", level:"غير محدد"},
   {id:"p14", name:"طقم أقلام تخطيط فاخر", category:"أقلام", icon:"🖋️", price:95, stock:1, threshold:3, barcode:"611234500141"},
 ];
-
-// نسخة احتياطية محلية: كتخلي الإضافة خدامة حتى إلى كان اتصال Firebase
-// مقطوع أو كانت إعدادات المشروع مازال ما تكمّلاتش.
-const LOCAL_BACKUP_KEY = 'manar-pos-backup-v1';
-function saveLocalBackup(){
-  try{
-    localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify({
-      products, sales, quotes, archivedSales, movements, users, orderNotes
-    }));
-  }catch(e){ console.warn('Local backup failed:', e); }
-}
-function restoreLocalBackup(){
-  try{
-    const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
-    if(!raw) return false;
-    const data = JSON.parse(raw);
-    if(!Array.isArray(data.products)) return false;
-    products = data.products;
-    sales = Array.isArray(data.sales) ? data.sales : [];
-    quotes = Array.isArray(data.quotes) ? data.quotes : [];
-    archivedSales = Array.isArray(data.archivedSales) ? data.archivedSales : [];
-    movements = Array.isArray(data.movements) ? data.movements : [];
-    users = Array.isArray(data.users) && data.users.length ? data.users : defaultUsers.slice();
-    orderNotes = Array.isArray(data.orderNotes) ? data.orderNotes : [];
-    return true;
-  }catch(e){
-    console.warn('Local backup could not be read:', e);
-    return false;
-  }
-}
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -944,7 +918,6 @@ async function loadData(){
       movements = data.movements || [];
       users = (data.users && data.users.length) ? data.users : defaultUsers;
       orderNotes = data.orderNotes || [];
-      saveLocalBackup();
       if(!data.users || !data.users.length){
         await setDoc(storeRef, {users}, {merge:true});
       }
@@ -957,18 +930,14 @@ async function loadData(){
       users = defaultUsers;
       orderNotes = [];
       await setDoc(storeRef, {products, sales, quotes, archivedSales, movements, users, orderNotes});
-      saveLocalBackup();
     }
   }catch(e){
     console.error(e);
-    if(!restoreLocalBackup()){
-      products = defaultProducts;
-      sales = [];
-      quotes = [];
-      users = defaultUsers;
-      orderNotes = [];
-      saveLocalBackup();
-    }
+    products = defaultProducts;
+    sales = [];
+    quotes = [];
+    users = defaultUsers;
+    orderNotes = [];
     const statusEl = document.getElementById('syncStatus');
     statusEl.textContent = '⚠️ تحقق من إعدادات Firebase';
     statusEl.classList.add('offline');
@@ -988,32 +957,28 @@ function listenRealtime(){
   onSnapshot(storeRef, (snap)=>{
     if(!snap.exists()) return;
     const data = snap.data();
-    if(data.products){
-      const remoteProducts = data.products;
-      const remoteIds = new Set(remoteProducts.map(p=>p.id));
-      // Keep only unsynchronised local products that are absent from this
-      // snapshot.  This prevents the common "added then disappeared" issue
-      // caused by an older initial snapshot arriving after the click.
-      const pendingLocalProducts = products.filter(p=>
-        pendingProductIds.has(p.id) && !remoteIds.has(p.id)
-      );
-      products = [...remoteProducts, ...pendingLocalProducts];
-      // When Firebase contains a pending product, it has reached the cloud.
-      remoteIds.forEach(id=>pendingProductIds.delete(id));
-    }
+    if(data.products) products = data.products;
     if(data.sales) sales = data.sales;
     if(data.quotes) quotes = data.quotes;
     if(data.archivedSales) archivedSales = data.archivedSales;
     if(data.movements) movements = data.movements;
     if(data.users && data.users.length) users = data.users;
     if(data.orderNotes) orderNotes = data.orderNotes;
-    saveLocalBackup();
-    renderProducts();
-    renderOrder();
-    if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
+
     const statusEl = document.getElementById('syncStatus');
     statusEl.textContent = '🔗 متصل ومتزامن (Firebase)';
     statusEl.classList.remove('offline');
+
+    // إلا كان هاد التحديث هو غير الصدى ديال الحفظ اللي درنا حنا بروحنا (رندرينا الواجهة يدويا من قبل)،
+    // ماكاينش داعي نعاودو نرسمو الواجهة كاملة مرة ثانية — هذا كان كيدير رندر مزدوج فكل عملية
+    if(suppressNextSnapshotRender){
+      suppressNextSnapshotRender = false;
+      return;
+    }
+
+    renderProducts();
+    renderOrder();
+    if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
   }, (err)=>{
     console.error(err);
     const statusEl = document.getElementById('syncStatus');
@@ -1023,53 +988,49 @@ function listenRealtime(){
 }
 function manualSync(){ showToast('المزامنة تلقائية ومباشرة عبر Firebase ✅'); }
 
+let suppressNextSnapshotRender = false; // true right after we push our own write, so the local echo from onSnapshot doesn't force a second full re-render
 async function persistProducts(){
   const { setDoc, storeRef } = window.__fb;
-  try{
-    await setDoc(storeRef, {products, sales, movements, users}, {merge:true});
-    saveLocalBackup();
-    return 'cloud';
-  }catch(e){
-    // Do not pretend the product was saved.  The caller needs this result to
-    // keep the form open and restore the UI if Firestore rejects the write.
-    console.error('Firebase product save failed:', e);
-    // The cashier can keep working on this device.  The next successful
-    // Firebase connection will be needed to share these changes with others.
-    saveLocalBackup();
-    showToast('تحفظ المنتوج فهاد الجهاز؛ تعذرت المزامنة مع Firebase');
-    return 'local';
-  }
+  suppressNextSnapshotRender = true;
+  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ البيانات — تحقق من إعدادات Firebase'); }
 }
 async function persistSales(){
   const { setDoc, storeRef } = window.__fb;
+  suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); }
 }
 async function persistQuotes(){
   const { setDoc, storeRef } = window.__fb;
+  suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {quotes, movements}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ التسعيرة — تحقق من إعدادات Firebase'); }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التسعيرة — تحقق من إعدادات Firebase'); }
 }
 async function persistUsers(){
   const { setDoc, storeRef } = window.__fb;
+  suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {users}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); }
 }
 async function persistArchive(){
   const { setDoc, storeRef } = window.__fb;
+  suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); }
 }
 async function persistOrderNotes(){
   const { setDoc, storeRef } = window.__fb;
+  suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {orderNotes}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ الطلبية — تحقق من إعدادات Firebase'); }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الطلبية — تحقق من إعدادات Firebase'); }
 }
 // used when converting a quote to a final sale: touches products, sales AND quotes together
 async function persistConvert(){
   const { setDoc, storeRef } = window.__fb;
+  suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {products, sales, quotes, movements}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ التحويل — تحقق من إعدادات Firebase'); }
+  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التحويل — تحقق من إعدادات Firebase'); }
 }
 function addMovement(type, description){
   movements.unshift({
@@ -1179,14 +1140,17 @@ function renderProducts(){
     return;
   }
   grid.innerHTML = list.map(p=>`
-    <button class="pbtn" ${p.stock<=0?'disabled':''} onclick="addToOrder('${p.id}')">
-      <span class="picon">${p.icon}</span>
-      <span class="pname">${p.name}</span>
-      <span class="pprice nums">${p.price} د.م</span>
-      ${bookTagsHtml(p)}
-      ${p.barcode ? `<span class="pbarcode nums">${p.barcode}</span>` : ''}
-      ${stockLabel(p)}
-    </button>
+    <div class="pcard-wrap">
+      ${isAdmin ? `<button class="pcard-edit" title="تعديل المنتوج" onclick="event.stopPropagation(); openProductForm('${p.id}')">✏️</button>` : ''}
+      <button class="pbtn" ${p.stock<=0?'disabled':''} onclick="addToOrder('${p.id}')">
+        <span class="picon">${p.icon}</span>
+        <span class="pname">${p.name}</span>
+        <span class="pprice nums">${p.price} د.م</span>
+        ${bookTagsHtml(p)}
+        ${p.barcode ? `<span class="pbarcode nums">${p.barcode}</span>` : ''}
+        ${stockLabel(p)}
+      </button>
+    </div>
   `).join('');
 }
 function clearProductSearch(){
@@ -1529,7 +1493,6 @@ async function finishSale(){
   addMovement('بيع', `عملية بيع بقيمة ${total.toFixed(2)} د.م (${items.length} صنف: ${items.map(i=>i.name+' ×'+i.qty).join('، ')})${customerName?` — العميل: ${customerName}`:''}`);
 
   await persistProducts();
-  await persistSales();
   renderProducts();
 
   lastReceiptData = sale;
@@ -1809,9 +1772,14 @@ async function deleteInvoice(id){
 
   addMovement(isQuote ? 'حذف تسعيرة' : 'حذف فاتورة', `تم حذف ${label} رقم ${sale.id} بقيمة ${(+sale.total).toFixed(2)} د.م${restored.length?' وتمت إعادة الكميات للمخزون: '+restored.join('، '):''}`);
 
-  if(!isQuote) await persistProducts();
-  if(loc.type==='quote') await persistQuotes();
-  else await persistArchive();
+  if(loc.type==='live'){
+    await persistProducts(); // كتشمل تحديث المخزون + إزالة عملية البيع + الحركات، بلا حاجة لكتابة الأرشيف لي ماتبدلش
+  }else if(loc.type==='quote'){
+    await persistQuotes();
+  }else{
+    if(!isQuote) await persistProducts();
+    await persistArchive();
+  }
   renderAdmin();
   renderProducts();
   showToast(isQuote ? 'تم حذف التسعيرة' : 'تم حذف الفاتورة');
@@ -2672,14 +2640,6 @@ async function saveProduct(){
     showToast('هذا الباركود مستعمل من طرف منتوج آخر');
     return;
   }
-
-  // Keep a copy before changing the local state.  If Firebase rejects the
-  // write (usually because of Firestore Rules), the product must not appear
-  // added only temporarily and then disappear on the next sync.
-  const productsBeforeSave = structuredClone(products);
-  const movementsBeforeSave = structuredClone(movements);
-
-  let changedProductId = id;
   if(id){
     const p = products.find(x=>x.id===id);
     const oldStock = p.stock;
@@ -2689,23 +2649,10 @@ async function saveProduct(){
       addMovement('تعديل المخزون', `"${name}": تغيرت الكمية من ${oldStock} إلى ${stock} (${diff>0?'+':''}${diff})`);
     }
   }else{
-    changedProductId = 'p'+Date.now();
-    products.push({id:changedProductId,name,category,icon,barcode,price,stock,threshold,schoolType,level});
+    products.push({id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold,schoolType,level});
     addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
   }
-
-  pendingProductIds.add(changedProductId);
-  const saved = await persistProducts();
-  if(!saved){
-    products = productsBeforeSave;
-    movements = movementsBeforeSave;
-    renderAdmin(); renderProducts(); renderCategories();
-    showToast('ما تحفظش المنتوج: تحقق من صلاحيات Firebase أو الاتصال');
-    return;
-  }
-
-  if(saved==='cloud') pendingProductIds.delete(changedProductId);
-
+  await persistProducts();
   toggleProductForm(false);
   renderAdmin(); renderProducts(); renderCategories();
   showToast('تم حفظ المنتوج');
