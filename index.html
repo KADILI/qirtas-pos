@@ -792,8 +792,20 @@
 
   const fbApp = initializeApp(firebaseConfig);
   const db = getFirestore(fbApp);
+  // الوثيقة القديمة (كانت فيها كلشي مجمّع) — كنخليوها غير باش نقراو منها البيانات مرة وحدة عند الترحيل
   const storeRef = doc(db, "qirtas_store", "main");
-  window.__fb = { db, storeRef, getDoc, setDoc, onSnapshot };
+  // الهيكلة الجديدة: كل نوع بيانات فوثيقة خاصة بيه، باش حجم كل وثيقة يبقى صغير بزاف
+  // ولا يقدرش يقرب من الحد الأقصى ديال Firestore (1 ميغابايت لكل وثيقة)
+  const refs = {
+    products: doc(db, "qirtas_store", "products"),
+    sales: doc(db, "qirtas_store", "sales"),
+    quotes: doc(db, "qirtas_store", "quotes"),
+    archivedSales: doc(db, "qirtas_store", "archivedSales"),
+    movements: doc(db, "qirtas_store", "movements"),
+    users: doc(db, "qirtas_store", "users"),
+    orderNotes: doc(db, "qirtas_store", "orderNotes"),
+  };
+  window.__fb = { db, storeRef, refs, getDoc, setDoc, onSnapshot };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 
@@ -907,11 +919,32 @@ function updateClock(){
 setInterval(updateClock, 1000); updateClock();
 
 async function loadData(){
-  const { getDoc, setDoc, onSnapshot, storeRef } = window.__fb;
+  const { getDoc, setDoc, refs, storeRef } = window.__fb;
   try{
-    const snap = await getDoc(storeRef);
-    if(snap.exists()){
-      const data = snap.data();
+    // نحاولو نقراو الوثائق الجديدة (كل نوع بيانات فوثيقة خاصة بيه)
+    const [pSnap, sSnap, qSnap, aSnap, mSnap, uSnap, oSnap] = await Promise.all([
+      getDoc(refs.products), getDoc(refs.sales), getDoc(refs.quotes),
+      getDoc(refs.archivedSales), getDoc(refs.movements), getDoc(refs.users), getDoc(refs.orderNotes)
+    ]);
+    const migratedAlready = pSnap.exists() || sSnap.exists() || qSnap.exists() || aSnap.exists() || mSnap.exists() || uSnap.exists() || oSnap.exists();
+
+    if(migratedAlready){
+      products = (pSnap.exists() && pSnap.data().products) || defaultProducts;
+      sales = (sSnap.exists() && sSnap.data().sales) || [];
+      quotes = (qSnap.exists() && qSnap.data().quotes) || [];
+      archivedSales = (aSnap.exists() && aSnap.data().archivedSales) || [];
+      movements = (mSnap.exists() && mSnap.data().movements) || [];
+      const uData = uSnap.exists() ? uSnap.data().users : null;
+      users = (uData && uData.length) ? uData : defaultUsers;
+      orderNotes = (oSnap.exists() && oSnap.data().orderNotes) || [];
+      if(!uData || !uData.length){
+        await setDoc(refs.users, sanitizeForFirestore({users}), {merge:true});
+      }
+    }else{
+      // أول مرة كيخدم بيها التطبيق بالهيكلة الجديدة: نشوفو واش كاينة الوثيقة القديمة "main"
+      // (لي كانت فيها كلشي مجمّع) باش ننقلو منها البيانات مرة وحدة (ترحيل تلقائي)، بلا ما تضيع حتى بلاصة
+      const oldSnap = await getDoc(storeRef);
+      const data = oldSnap.exists() ? oldSnap.data() : {};
       products = data.products || defaultProducts;
       sales = data.sales || [];
       quotes = data.quotes || [];
@@ -919,18 +952,15 @@ async function loadData(){
       movements = data.movements || [];
       users = (data.users && data.users.length) ? data.users : defaultUsers;
       orderNotes = data.orderNotes || [];
-      if(!data.users || !data.users.length){
-        await setDoc(storeRef, {users}, {merge:true});
-      }
-    }else{
-      products = defaultProducts;
-      sales = [];
-      quotes = [];
-      archivedSales = [];
-      movements = [];
-      users = defaultUsers;
-      orderNotes = [];
-      await setDoc(storeRef, {products, sales, quotes, archivedSales, movements, users, orderNotes});
+      await Promise.all([
+        setDoc(refs.products, sanitizeForFirestore({products})),
+        setDoc(refs.sales, sanitizeForFirestore({sales})),
+        setDoc(refs.quotes, sanitizeForFirestore({quotes})),
+        setDoc(refs.archivedSales, sanitizeForFirestore({archivedSales})),
+        setDoc(refs.movements, sanitizeForFirestore({movements})),
+        setDoc(refs.users, sanitizeForFirestore({users})),
+        setDoc(refs.orderNotes, sanitizeForFirestore({orderNotes})),
+      ]);
     }
   }catch(e){
     console.error(e);
@@ -953,96 +983,180 @@ async function loadData(){
 /* ===== Multi-device real-time sync via Firebase Firestore =====
    Any change (new sale, stock update, product edit) from ANY device
    is pushed instantly here, without touching this device's in-progress order. */
-function listenRealtime(){
-  const { onSnapshot, storeRef } = window.__fb;
-  onSnapshot(storeRef, (snap)=>{
-    if(!snap.exists()) return;
-    const data = snap.data();
-    if(data.products) products = data.products;
-    if(data.sales) sales = data.sales;
-    if(data.quotes) quotes = data.quotes;
-    if(data.archivedSales) archivedSales = data.archivedSales;
-    if(data.movements) movements = data.movements;
-    if(data.users && data.users.length) users = data.users;
-    if(data.orderNotes) orderNotes = data.orderNotes;
-
-    const statusEl = document.getElementById('syncStatus');
-    statusEl.textContent = '🔗 متصل ومتزامن (Firebase)';
-    statusEl.classList.remove('offline');
-
-    // إلا كان هاد التحديث هو غير الصدى ديال الحفظ اللي درنا حنا بروحنا (رندرينا الواجهة يدويا من قبل)،
-    // ماكاينش داعي نعاودو نرسمو الواجهة كاملة مرة ثانية — هذا كان كيدير رندر مزدوج فكل عملية
-    if(suppressNextSnapshotRender){
-      suppressNextSnapshotRender = false;
-      return;
-    }
-
+let renderDebounceTimer = null;
+function scheduleRealtimeRender(){
+  // البيانات دابا موزعة على عدة وثائق، وعملية حفظ وحدة (بحال البيع) كتبدل عدة وثائق فنفس الوقت،
+  // فكل وحدة كتفجر onSnapshot ديالها بروحها. هنا كنجمعو (debounce) كل هاد الإشعارات لي كتوصل فنفس
+  // اللحظة فرندر واحد غير، بدل ما نرسمو الواجهة عدة مرات ديال الشي.
+  clearTimeout(renderDebounceTimer);
+  renderDebounceTimer = setTimeout(()=>{
     renderProducts();
     renderOrder();
     if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
-  }, (err)=>{
+  }, 120);
+}
+function listenRealtime(){
+  const { onSnapshot, refs } = window.__fb;
+  const statusEl = document.getElementById('syncStatus');
+  function markOnline(){
+    statusEl.textContent = '🔗 متصل ومتزامن (Firebase)';
+    statusEl.classList.remove('offline');
+  }
+  function markError(err){
     console.error(err);
-    const statusEl = document.getElementById('syncStatus');
     statusEl.textContent = '⚠️ تعذر الاتصال بـ Firebase';
     statusEl.classList.add('offline');
-  });
+  }
+  // إلا كان هاد التحديث هو غير الصدى ديال حفظ درناه حنا بروحنا (رندرينا الواجهة يدويا من قبل)،
+  // كنصيفطو اسم الوثيقة لـ suppressedEchoDocs قبل الحفظ باش نتجنبو رندر مزدوج
+  function handleUpdate(name){
+    markOnline();
+    if(suppressedEchoDocs.has(name)){
+      suppressedEchoDocs.delete(name);
+      return;
+    }
+    scheduleRealtimeRender();
+  }
+  onSnapshot(refs.products, (snap)=>{ if(snap.exists() && snap.data().products) products = snap.data().products; handleUpdate('products'); }, markError);
+  onSnapshot(refs.sales, (snap)=>{ if(snap.exists() && snap.data().sales) sales = snap.data().sales; handleUpdate('sales'); }, markError);
+  onSnapshot(refs.quotes, (snap)=>{ if(snap.exists() && snap.data().quotes) quotes = snap.data().quotes; handleUpdate('quotes'); }, markError);
+  onSnapshot(refs.archivedSales, (snap)=>{ if(snap.exists() && snap.data().archivedSales) archivedSales = snap.data().archivedSales; handleUpdate('archivedSales'); }, markError);
+  onSnapshot(refs.movements, (snap)=>{ if(snap.exists() && snap.data().movements) movements = snap.data().movements; handleUpdate('movements'); }, markError);
+  onSnapshot(refs.users, (snap)=>{ if(snap.exists() && snap.data().users && snap.data().users.length) users = snap.data().users; handleUpdate('users'); }, markError);
+  onSnapshot(refs.orderNotes, (snap)=>{ if(snap.exists() && snap.data().orderNotes) orderNotes = snap.data().orderNotes; handleUpdate('orderNotes'); }, markError);
 }
 function manualSync(){ showToast('المزامنة تلقائية ومباشرة عبر Firebase ✅'); }
 
-let suppressNextSnapshotRender = false; // true right after we push our own write, so the local echo from onSnapshot doesn't force a second full re-render
+// Firestore كيرفض أي قيمة undefined فأي حقل (كيطيح بخطأ invalid-argument على الوثيقة كاملة).
+// هاد الدالة كتبدل أي undefined بـ null بشكل تلقائي وعميق (recursive) قبل كل عملية حفظ،
+// باش شي منتوج/مستخدم/فاتورة قديمة فيها حقل ناقص ما توقفش الحفظ لكل شي حاجة أخرى
+function sanitizeForFirestore(value){
+  if(Array.isArray(value)) return value.map(sanitizeForFirestore);
+  if(value && typeof value === 'object'){
+    const out = {};
+    for(const k in value){
+      out[k] = value[k] === undefined ? null : sanitizeForFirestore(value[k]);
+    }
+    return out;
+  }
+  return value === undefined ? null : value;
+}
+
+let suppressedEchoDocs = new Set(); // أسماء الوثائق لي غادي توصل ليهم الصدى ديال حفظ درناه حنا بروحنا (باش نتفاديو رندر مزدوج)
+function markOwnWrite(names){ names.forEach(n=>suppressedEchoDocs.add(n)); }
+
+// كتحول أي خطأ Firestore لرسالة مفهومة، وكتزيد الحجم التقريبي ديال البيانات لي حاولنا نحفظوها
+// (مفيد بزاف باش نعرفو إلا كان السبب هو تجاوز 1 ميغابايت المسموح بهم فكل وثيقة)
+function describeFirestoreError(e, payload){
+  let sizeInfo = '';
+  try{
+    const sizeKB = Math.round(new Blob([JSON.stringify(payload)]).size / 1024);
+    sizeInfo = ` (حجم البيانات: ~${sizeKB} كيلوبايت)`;
+  }catch(_){}
+  const code = e && e.code;
+  if(code === 'invalid-argument') return 'invalid-argument — قيمة غير مقبولة أو الوثيقة كبرات بزاف' + sizeInfo;
+  if(code === 'resource-exhausted') return 'resource-exhausted — تجاوزتي الحد اليومي المجاني ديال Firestore';
+  if(code === 'unavailable') return 'unavailable — مشكل فالاتصال بالإنترنت';
+  if(code === 'permission-denied') return 'permission-denied — مشكل فصلاحيات Firestore Rules';
+  return (code || e.message || e) + sizeInfo;
+}
+
 // كل دالة persist* كترجع true إلا نجح الحفظ فـ Firebase، أو false إلا فشل —
 // هاد الشي مهم بزاف: قبل، الخطأ كان كيتلقط هنا وكيبين تنبيه، لكن الكود اللي استدعى
 // الدالة كان كيكمل كأن كلشي مزيان (كيبين "تم الحفظ" وكيسد النافذة)، فكانت البيانات
 // كتضيع بصمت من غير ما يعرف المستخدم أن الحفظ فشل فعلا.
+//
+// كل نوع بيانات دابا فوثيقة Firestore خاصة بيه (بدل وثيقة وحدة فيها كلشي)، فكل دالة
+// كتحفظ غير الوثائق لي فعلا تبدلات، بالتوازي (Promise.all)، وهاد الشي كيصغر بزاف
+// احتمال ما تتعدى شي وثيقة الحد الأقصى ديالها (1 ميغابايت).
 async function persistProducts(){
-  const { setDoc, storeRef } = window.__fb;
-  suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; console.error('persistProducts failed:', e); showToast('تعذر حفظ البيانات: ' + (e.code || e.message || e), 6000); return false; }
+  const { setDoc, refs } = window.__fb;
+  const payload = {products, movements};
+  markOwnWrite(['products','movements']);
+  try{
+    await Promise.all([
+      setDoc(refs.products, sanitizeForFirestore({products}), {merge:true}),
+      setDoc(refs.movements, sanitizeForFirestore({movements}), {merge:true}),
+    ]);
+    return true;
+  }catch(e){ console.error('persistProducts failed:', e); showToast('تعذر حفظ البيانات: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
 async function persistSales(){
-  const { setDoc, storeRef } = window.__fb;
-  suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; console.error('persistSales failed:', e); showToast('تعذر حفظ عملية البيع: ' + (e.code || e.message || e), 6000); return false; }
+  const { setDoc, refs } = window.__fb;
+  const payload = {products, sales, movements};
+  markOwnWrite(['products','sales','movements']);
+  try{
+    await Promise.all([
+      setDoc(refs.products, sanitizeForFirestore({products}), {merge:true}),
+      setDoc(refs.sales, sanitizeForFirestore({sales}), {merge:true}),
+      setDoc(refs.movements, sanitizeForFirestore({movements}), {merge:true}),
+    ]);
+    return true;
+  }catch(e){ console.error('persistSales failed:', e); showToast('تعذر حفظ عملية البيع: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
 async function persistQuotes(){
-  const { setDoc, storeRef } = window.__fb;
-  suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {quotes, movements}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; console.error('persistQuotes failed:', e); showToast('تعذر حفظ التسعيرة: ' + (e.code || e.message || e), 6000); return false; }
+  const { setDoc, refs } = window.__fb;
+  const payload = {quotes, movements};
+  markOwnWrite(['quotes','movements']);
+  try{
+    await Promise.all([
+      setDoc(refs.quotes, sanitizeForFirestore({quotes}), {merge:true}),
+      setDoc(refs.movements, sanitizeForFirestore({movements}), {merge:true}),
+    ]);
+    return true;
+  }catch(e){ console.error('persistQuotes failed:', e); showToast('تعذر حفظ التسعيرة: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
 async function persistUsers(){
-  const { setDoc, storeRef } = window.__fb;
-  suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {users}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; console.error('persistUsers failed:', e); showToast('تعذر حفظ المستخدمين: ' + (e.code || e.message || e), 6000); return false; }
+  const { setDoc, refs } = window.__fb;
+  const payload = {users};
+  markOwnWrite(['users']);
+  try{ await setDoc(refs.users, sanitizeForFirestore({users}), {merge:true}); return true; }
+  catch(e){ console.error('persistUsers failed:', e); showToast('تعذر حفظ المستخدمين: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
 async function persistArchive(){
-  const { setDoc, storeRef } = window.__fb;
-  suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; console.error('persistArchive failed:', e); showToast('تعذر حفظ الأرشيف: ' + (e.code || e.message || e), 6000); return false; }
+  const { setDoc, refs } = window.__fb;
+  const payload = {sales, archivedSales, movements};
+  markOwnWrite(['sales','archivedSales','movements']);
+  try{
+    await Promise.all([
+      setDoc(refs.sales, sanitizeForFirestore({sales}), {merge:true}),
+      setDoc(refs.archivedSales, sanitizeForFirestore({archivedSales}), {merge:true}),
+      setDoc(refs.movements, sanitizeForFirestore({movements}), {merge:true}),
+    ]);
+    return true;
+  }catch(e){ console.error('persistArchive failed:', e); showToast('تعذر حفظ الأرشيف: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
 async function persistOrderNotes(){
-  const { setDoc, storeRef } = window.__fb;
-  suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {orderNotes}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; console.error('persistOrderNotes failed:', e); showToast('تعذر حفظ الطلبية: ' + (e.code || e.message || e), 6000); return false; }
+  const { setDoc, refs } = window.__fb;
+  const payload = {orderNotes};
+  markOwnWrite(['orderNotes']);
+  try{ await setDoc(refs.orderNotes, sanitizeForFirestore({orderNotes}), {merge:true}); return true; }
+  catch(e){ console.error('persistOrderNotes failed:', e); showToast('تعذر حفظ الطلبية: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
 // used when converting a quote to a final sale: touches products, sales AND quotes together
 async function persistConvert(){
-  const { setDoc, storeRef } = window.__fb;
-  suppressNextSnapshotRender = true;
-  try{ await setDoc(storeRef, {products, sales, quotes, movements}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; console.error('persistConvert failed:', e); showToast('تعذر حفظ التحويل: ' + (e.code || e.message || e), 6000); return false; }
+  const { setDoc, refs } = window.__fb;
+  const payload = {products, sales, quotes, movements};
+  markOwnWrite(['products','sales','quotes','movements']);
+  try{
+    await Promise.all([
+      setDoc(refs.products, sanitizeForFirestore({products}), {merge:true}),
+      setDoc(refs.sales, sanitizeForFirestore({sales}), {merge:true}),
+      setDoc(refs.quotes, sanitizeForFirestore({quotes}), {merge:true}),
+      setDoc(refs.movements, sanitizeForFirestore({movements}), {merge:true}),
+    ]);
+    return true;
+  }catch(e){ console.error('persistConvert failed:', e); showToast('تعذر حفظ التحويل: ' + describeFirestoreError(e, payload), 6000); return false; }
 }
+
+const MAX_MOVEMENTS = 3000; // سقف أمان: كيتفادى رجوع مشكل حجم الوثيقة فالمستقبل البعيد بحال سجل الحركات كبر بزاف
 function addMovement(type, description){
   const id = 'm'+Date.now()+Math.floor(Math.random()*1000);
   movements.unshift({
     id, type, description,
     date: new Date().toLocaleString('ar-MA')
   });
+  if(movements.length > MAX_MOVEMENTS) movements.length = MAX_MOVEMENTS; // كنحيدو الأقدم
   return id;
 }
 
