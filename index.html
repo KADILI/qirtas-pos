@@ -860,11 +860,12 @@ const defaultProducts = [
   {id:"p14", name:"طقم أقلام تخطيط فاخر", category:"أقلام", icon:"🖋️", price:95, stock:1, threshold:3, barcode:"611234500141"},
 ];
 
-function showToast(msg){
+function showToast(msg, duration){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2200);
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(()=>t.classList.remove('show'), duration || 2200);
 }
 
 // seed with default admin so login works instantly even before Firestore responds
@@ -997,51 +998,52 @@ async function persistProducts(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ البيانات — تحقق من إعدادات Firebase'); return false; }
+  catch(e){ suppressNextSnapshotRender = false; console.error('persistProducts failed:', e); showToast('تعذر حفظ البيانات: ' + (e.code || e.message || e), 6000); return false; }
 }
 async function persistSales(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ عملية البيع — تحقق من إعدادات Firebase'); return false; }
+  catch(e){ suppressNextSnapshotRender = false; console.error('persistSales failed:', e); showToast('تعذر حفظ عملية البيع: ' + (e.code || e.message || e), 6000); return false; }
 }
 async function persistQuotes(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {quotes, movements}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التسعيرة — تحقق من إعدادات Firebase'); return false; }
+  catch(e){ suppressNextSnapshotRender = false; console.error('persistQuotes failed:', e); showToast('تعذر حفظ التسعيرة: ' + (e.code || e.message || e), 6000); return false; }
 }
 async function persistUsers(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {users}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ المستخدمين — تحقق من إعدادات Firebase'); return false; }
+  catch(e){ suppressNextSnapshotRender = false; console.error('persistUsers failed:', e); showToast('تعذر حفظ المستخدمين: ' + (e.code || e.message || e), 6000); return false; }
 }
 async function persistArchive(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {sales, archivedSales, movements}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الأرشيف — تحقق من إعدادات Firebase'); return false; }
+  catch(e){ suppressNextSnapshotRender = false; console.error('persistArchive failed:', e); showToast('تعذر حفظ الأرشيف: ' + (e.code || e.message || e), 6000); return false; }
 }
 async function persistOrderNotes(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {orderNotes}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ الطلبية — تحقق من إعدادات Firebase'); return false; }
+  catch(e){ suppressNextSnapshotRender = false; console.error('persistOrderNotes failed:', e); showToast('تعذر حفظ الطلبية: ' + (e.code || e.message || e), 6000); return false; }
 }
 // used when converting a quote to a final sale: touches products, sales AND quotes together
 async function persistConvert(){
   const { setDoc, storeRef } = window.__fb;
   suppressNextSnapshotRender = true;
   try{ await setDoc(storeRef, {products, sales, quotes, movements}, {merge:true}); return true; }
-  catch(e){ suppressNextSnapshotRender = false; showToast('تعذر حفظ التحويل — تحقق من إعدادات Firebase'); return false; }
+  catch(e){ suppressNextSnapshotRender = false; console.error('persistConvert failed:', e); showToast('تعذر حفظ التحويل: ' + (e.code || e.message || e), 6000); return false; }
 }
 function addMovement(type, description){
+  const id = 'm'+Date.now()+Math.floor(Math.random()*1000);
   movements.unshift({
-    id: 'm'+Date.now()+Math.floor(Math.random()*1000),
-    type, description,
+    id, type, description,
     date: new Date().toLocaleString('ar-MA')
   });
+  return id;
 }
 
 /* ===== Tabs ===== */
@@ -2565,6 +2567,7 @@ async function saveUser(){
   }
   let isNewUser = false;
   let previousState = null;
+  let newUserId = null;
   if(id){
     const u = users.find(x=>x.id===id);
     previousState = {...u};
@@ -2572,12 +2575,13 @@ async function saveUser(){
     if(currentUser && currentUser.id===id) currentUser = u;
   }else{
     isNewUser = true;
-    users.push({id:'u'+Date.now(), name, username, password, role});
+    newUserId = 'u'+Date.now();
+    users.push({id:newUserId, name, username, password, role});
   }
   const saved = await persistUsers();
   if(!saved){
-    if(isNewUser){ users.pop(); }
-    else if(previousState){ Object.assign(users.find(x=>x.id===id), previousState); }
+    if(isNewUser){ users = users.filter(x=>x.id!==newUserId); }
+    else if(previousState){ const u = users.find(x=>x.id===id); if(u) Object.assign(u, previousState); }
     renderAdmin();
     return; // كنخليو النافذة مفتوحة والبيانات مرجعة للوراء، حيت الحفظ فشل فعلا
   }
@@ -2677,6 +2681,9 @@ async function saveProduct(){
   }
   let isNewProduct = false;
   let previousState = null; // snapshot used to roll back locally if the Firebase write fails
+  let newProductId = null;
+  let newMovementId = null;
+  let editMovementId = null;
   if(id){
     const p = products.find(x=>x.id===id);
     previousState = {...p};
@@ -2684,27 +2691,30 @@ async function saveProduct(){
     Object.assign(p,{name,category,icon,barcode,price,stock,threshold,schoolType,level});
     if(stock !== oldStock){
       const diff = stock - oldStock;
-      addMovement('تعديل المخزون', `"${name}": تغيرت الكمية من ${oldStock} إلى ${stock} (${diff>0?'+':''}${diff})`);
+      editMovementId = addMovement('تعديل المخزون', `"${name}": تغيرت الكمية من ${oldStock} إلى ${stock} (${diff>0?'+':''}${diff})`);
     }
   }else{
     isNewProduct = true;
     const newProduct = {id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold,schoolType,level};
+    newProductId = newProduct.id;
     products.push(newProduct);
-    addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
+    newMovementId = addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
   }
 
   const saved = await persistProducts();
   if(!saved){
     // الحفظ فشل فعلا (مشكل شبكة/Firebase) — نرجعو التغيير المحلي للوراء باش
     // الحالة ديال الواجهة تبقى مطابقة لما هو محفوظ فعلا، ونخليو النافذة مفتوحة
-    // باش المستخدم يقدر يعاود يحاول، بلا ما نبينو ليه تنبيه "تم الحفظ" كاذب
+    // باش المستخدم يقدر يعاود يحاول، بلا ما نبينو ليه تنبيه "تم الحفظ" كاذب.
+    // كنحيدو بالـ id بالضبط (ماشي pop/shift حسب الموقع)، حيت المصفوفة يمكن
+    // تكون تبدلات فالخلفية عبر المزامنة، وpop/shift كانو كيحيدو عنصر آخر بالغلط
     if(isNewProduct){
-      products.pop();
-      movements.shift();
+      products = products.filter(x=>x.id!==newProductId);
+      if(newMovementId) movements = movements.filter(m=>m.id!==newMovementId);
     }else if(previousState){
       const p = products.find(x=>x.id===id);
-      Object.assign(p, previousState);
-      if(previousState.stock !== stock) movements.shift();
+      if(p) Object.assign(p, previousState);
+      if(editMovementId) movements = movements.filter(m=>m.id!==editMovementId);
     }
     renderAdmin(); renderProducts(); renderCategories();
     return;
@@ -2719,10 +2729,12 @@ async function deleteProduct(id){
   if(!confirm('واش متأكد من حذف هذا المنتوج؟')) return;
   const p = products.find(x=>x.id===id);
   products = products.filter(p=>p.id!==id);
-  if(p) addMovement('حذف منتج', `تم حذف "${p.name}" (كان بكمية ${p.stock})`);
+  let movementId = null;
+  if(p) movementId = addMovement('حذف منتج', `تم حذف "${p.name}" (كان بكمية ${p.stock})`);
   const saved = await persistProducts();
   if(!saved){
-    if(p){ products.push(p); movements.shift(); } // نرجعو المنتوج حيت الحذف ما تسجلش فعلا
+    if(p) products.push(p); // نرجعو المنتوج حيت الحذف ما تسجلش فعلا
+    if(movementId) movements = movements.filter(m=>m.id!==movementId);
     renderAdmin(); renderProducts();
     return;
   }
