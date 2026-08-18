@@ -154,7 +154,7 @@
   .order-line .icon-circle{ width:34px; height:34px; border-radius:50%; background:var(--paper); display:flex; align-items:center; justify-content:center; font-size:16px; flex:0 0 auto;}
   .order-line .oname{ font-weight:700; font-size:13.5px; }
   .order-line .oprice{ font-size:12px; color:var(--ink-soft); }
-  .oname-input{ font-weight:700; font-size:13.5px; border:1px solid transparent; background:transparent; border-radius:5px; padding:2px 4px; width:100%; font-family:inherit; color:var(--ink); }
+  .oname-input{ font-weight:700; font-size:13.5px; border:1px solid transparent; background:transparent; border-radius:5px; padding:2px 4px; width:100%; font-family:inherit; color:var(--ink); white-space:normal; word-break:break-word; overflow-wrap:break-word; line-height:1.35; min-height:18px; cursor:text; }
   .oname-input:hover, .oname-input:focus{ border-color:var(--paper-deep); background:#fff; outline:none; }
   .oprice-row{ display:flex; align-items:center; gap:4px; margin-top:2px; }
   .oprice-input{ font-size:12px; color:var(--ink-soft); border:1px solid transparent; background:transparent; border-radius:5px; padding:1px 4px; width:60px; font-family:inherit; }
@@ -883,6 +883,13 @@ function showToast(msg, duration){
   t._hideTimer = setTimeout(()=>t.classList.remove('show'), duration || 2200);
 }
 
+// كتبدل الحروف الخاصة (< > & ") بحال HTML entities باش النص يبان بشكل سليم
+// ملي كنحطوه جوه عنصر HTML (بحال div contenteditable) بلا ما يهرس التنسيق
+function escapeHtml(str){
+  return String(str==null?'':str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // seed with default admin so login works instantly even before Firestore responds
 users = defaultUsers.slice();
 
@@ -1542,7 +1549,7 @@ function renderOrder(){
         <div class="order-line">
           <div class="icon-circle">${p.icon}</div>
           <div style="flex:1;">
-            <input type="text" class="oname-input" value="${lineName.replace(/"/g,'&quot;')}" onchange="setLineName('${id}', this.value)" title="عدّل اسم المنتوج فهاد الطلبية">
+            <div class="oname-input" contenteditable="true" spellcheck="false" onblur="setLineName('${id}', this.textContent.trim())" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" title="عدّل اسم المنتوج فهاد الطلبية">${escapeHtml(lineName)}</div>
             <div class="oprice-row">
               <input type="number" class="oprice-input nums" min="0" step="0.01" value="${linePrice}" onchange="setLinePrice('${id}', this.value)" title="عدّل الثمن فهاد الطلبية">
               <span class="ld-label">د.م</span>
