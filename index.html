@@ -853,6 +853,36 @@ const defaultProducts = [
   {id:"p14", name:"طقم أقلام تخطيط فاخر", category:"أقلام", icon:"🖋️", price:95, stock:1, threshold:3, barcode:"611234500141"},
 ];
 
+// نسخة احتياطية محلية: كتخلي الإضافة خدامة حتى إلى كان اتصال Firebase
+// مقطوع أو كانت إعدادات المشروع مازال ما تكمّلاتش.
+const LOCAL_BACKUP_KEY = 'manar-pos-backup-v1';
+function saveLocalBackup(){
+  try{
+    localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify({
+      products, sales, quotes, archivedSales, movements, users, orderNotes
+    }));
+  }catch(e){ console.warn('Local backup failed:', e); }
+}
+function restoreLocalBackup(){
+  try{
+    const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    if(!Array.isArray(data.products)) return false;
+    products = data.products;
+    sales = Array.isArray(data.sales) ? data.sales : [];
+    quotes = Array.isArray(data.quotes) ? data.quotes : [];
+    archivedSales = Array.isArray(data.archivedSales) ? data.archivedSales : [];
+    movements = Array.isArray(data.movements) ? data.movements : [];
+    users = Array.isArray(data.users) && data.users.length ? data.users : defaultUsers.slice();
+    orderNotes = Array.isArray(data.orderNotes) ? data.orderNotes : [];
+    return true;
+  }catch(e){
+    console.warn('Local backup could not be read:', e);
+    return false;
+  }
+}
+
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -911,6 +941,7 @@ async function loadData(){
       movements = data.movements || [];
       users = (data.users && data.users.length) ? data.users : defaultUsers;
       orderNotes = data.orderNotes || [];
+      saveLocalBackup();
       if(!data.users || !data.users.length){
         await setDoc(storeRef, {users}, {merge:true});
       }
@@ -923,14 +954,18 @@ async function loadData(){
       users = defaultUsers;
       orderNotes = [];
       await setDoc(storeRef, {products, sales, quotes, archivedSales, movements, users, orderNotes});
+      saveLocalBackup();
     }
   }catch(e){
     console.error(e);
-    products = defaultProducts;
-    sales = [];
-    quotes = [];
-    users = defaultUsers;
-    orderNotes = [];
+    if(!restoreLocalBackup()){
+      products = defaultProducts;
+      sales = [];
+      quotes = [];
+      users = defaultUsers;
+      orderNotes = [];
+      saveLocalBackup();
+    }
     const statusEl = document.getElementById('syncStatus');
     statusEl.textContent = '⚠️ تحقق من إعدادات Firebase';
     statusEl.classList.add('offline');
@@ -957,6 +992,7 @@ function listenRealtime(){
     if(data.movements) movements = data.movements;
     if(data.users && data.users.length) users = data.users;
     if(data.orderNotes) orderNotes = data.orderNotes;
+    saveLocalBackup();
     renderProducts();
     renderOrder();
     if(isAdmin && document.getElementById('adminTab').style.display !== 'none') renderAdmin();
@@ -974,8 +1010,20 @@ function manualSync(){ showToast('المزامنة تلقائية ومباشرة
 
 async function persistProducts(){
   const { setDoc, storeRef } = window.__fb;
-  try{ await setDoc(storeRef, {products, sales, movements, users}, {merge:true}); }
-  catch(e){ showToast('تعذر حفظ البيانات — تحقق من إعدادات Firebase'); }
+  try{
+    await setDoc(storeRef, {products, sales, movements, users}, {merge:true});
+    saveLocalBackup();
+    return true;
+  }catch(e){
+    // Do not pretend the product was saved.  The caller needs this result to
+    // keep the form open and restore the UI if Firestore rejects the write.
+    console.error('Firebase product save failed:', e);
+    // The cashier can keep working on this device.  The next successful
+    // Firebase connection will be needed to share these changes with others.
+    saveLocalBackup();
+    showToast('تحفظ المنتوج فهاد الجهاز؛ تعذرت المزامنة مع Firebase');
+    return true;
+  }
 }
 async function persistSales(){
   const { setDoc, storeRef } = window.__fb;
@@ -2609,6 +2657,13 @@ async function saveProduct(){
     showToast('هذا الباركود مستعمل من طرف منتوج آخر');
     return;
   }
+
+  // Keep a copy before changing the local state.  If Firebase rejects the
+  // write (usually because of Firestore Rules), the product must not appear
+  // added only temporarily and then disappear on the next sync.
+  const productsBeforeSave = structuredClone(products);
+  const movementsBeforeSave = structuredClone(movements);
+
   if(id){
     const p = products.find(x=>x.id===id);
     const oldStock = p.stock;
@@ -2621,7 +2676,16 @@ async function saveProduct(){
     products.push({id:'p'+Date.now(),name,category,icon,barcode,price,stock,threshold,schoolType,level});
     addMovement('إضافة منتوج', `تمت إضافة "${name}" بكمية ${stock} وسعر ${price} د.م`);
   }
-  await persistProducts();
+
+  const saved = await persistProducts();
+  if(!saved){
+    products = productsBeforeSave;
+    movements = movementsBeforeSave;
+    renderAdmin(); renderProducts(); renderCategories();
+    showToast('ما تحفظش المنتوج: تحقق من صلاحيات Firebase أو الاتصال');
+    return;
+  }
+
   toggleProductForm(false);
   renderAdmin(); renderProducts(); renderCategories();
   showToast('تم حفظ المنتوج');
